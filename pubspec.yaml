@@ -1,0 +1,6 @@
+name: zwave
+description: A Dart library for interacting with Z-Wave devices on RPi
+dependencies:
+  logging: ^0.11.3
+dev_dependencies:
+  test: ^0.12.4
