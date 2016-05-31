@@ -12,7 +12,7 @@ and interact with Z-Wave devices.
 ## Requirements
 
 * A Z-Wave Controller such as the
-  [Aeon Labs Aeotec Z-Wave Z-Stick, Gen5 (ZW090)](https://www.google.com/webhp?ion=1&espv=2&ie=UTF-8#q=Aeon+Labs+Aeotec+Z-Wave+Z-Stick,+Gen5+(ZW090)&tbm=shop).
+  [Aeon Labs Aeotec Z-Wave Z-Stick, Gen5 (ZW090)](https://goo.gl/VPdrvb).
 
 * The [Open Z-Wave library](https://github.com/OpenZWave/open-zwave/) used by
   this Dart library to communicate with the Z-Wave controller.
