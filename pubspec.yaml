@@ -1,6 +1,12 @@
 name: zwave
+version: 0.1.0
+author: Dan Rubel <danrubel@google.com>
 description: A Dart library for interacting with Z-Wave devices on RPi
+homepage: https://github.com/danrubel/zwave.dart
+environment:
+  sdk: '>=1.15.0 <2.0.0'
 dependencies:
   logging: ^0.11.3
 dev_dependencies:
+  grinder: ^0.8.0
   test: ^0.12.4

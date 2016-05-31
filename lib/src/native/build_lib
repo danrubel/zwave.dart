@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# Build the libozw_ext.so native library.
+# The generated native library file is indirectly referenced by zwave.dart
+# via src/ozw.dart which imports 'dart-ext:osw_ext'
+#
+# Arguments: <buildScriptVersion> <DartSdkPath>
+#
+# Typically, this script is run by calling
+#
+#    pub global run zwave:build_lib
+#
+# See README for setup instructions
+
+# exit on error
+set -e
+
+#DARTVM=$(readlink `which dart`)
+#DARTBIN=$(dirname $DARTVM)
+#DARTSDK=$(dirname $DARTBIN)
+DARTSDK=$2
+
+cd $(dirname $0)
+echo building in `pwd`
+
+####################################################################
+# Open Z-Wave
+
+# * Shared Libary (libopenzwave.so.*):
+# 	The Shared Library is installed into either (prefix)/lib64 (on 64
+# 	bit platforms) or (prefix)/lib/ on 32 bit platforms)
+#
+#   On Raspberry Pi - /usr/local/lib/libopenzwave.so
+
+LIBS=/usr/local/lib/libopenzwave.so
+
+# * Header Files:
+# 	Installed into (prefix)/include/openzwave/
+#
+#   On Raspberry Pi - /usr/local/include/openzwave/**/*.h
+#
+
+HEADERS=/usr/local/include/openzwave/
+
+####################################################################
+# Build the open z-wave native library
+
+echo building libozw_ext.so
+g++ -fPIC -I$DARTSDK/ -I$HEADERS -c ozw_ext.cc
+# use --no-undefined to check for missing libraries
+gcc -shared -lpthread -Wl,$LIBS,-soname,libozw_ext.so -o libozw_ext.so ozw_ext.o
+
+# Copy the library
+cp libozw_ext.so ../libozw_ext.so

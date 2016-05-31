@@ -24,3 +24,23 @@ Open Z-Wave library](https://github.com/OpenZWave/open-zwave/blob/master/INSTALL
 Use the MinOZW example that is included in the Open Z-Wave library to ensure
 that the Open Z-Wave library is installed correctly and can communicate with
 your devices using your Z-Wave Controller.
+
+Activate the zwave package using the
+[pub global](https://www.dartlang.org/tools/pub/cmd/pub-global.html) command.
+```
+    pub global activate zwave
+```
+
+From your application directory (the application that references
+the zwave package) run the following command to build the native library
+```
+    pub global run zwave:build_lib
+```
+
+[pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)
+makes the Dart scripts in the zwave/bin directory runnable
+from the command line.
+[pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
+zwave:build_lib runs the [zwave/bin/build_lib.dart](bin/build_lib.dart)
+program which in turn calls the [build_lib](lib/src/native/build_lib) script
+to compile the native libozw_ext.so library for the zwave package.
