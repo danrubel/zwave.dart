@@ -12,9 +12,10 @@
 #include "Node.h"
 #include "Group.h"
 #include "Notification.h"
-#include "value_classes/ValueStore.h"
 #include "value_classes/Value.h"
 #include "value_classes/ValueBool.h"
+#include "value_classes/ValueID.h"
+#include "value_classes/ValueStore.h"
 #include "platform/Log.h"
 #include "Defs.h"
 
@@ -22,6 +23,7 @@
 #include "include/dart_native_api.h"
 
 using std::string;
+using std::vector;
 
 using OpenZWave::Driver;
 using OpenZWave::LogLevel;
@@ -40,12 +42,19 @@ using OpenZWave::LogLevel_Warning;
 using OpenZWave::Manager;
 using OpenZWave::Notification;
 using OpenZWave::Options;
+using OpenZWave::ValueID;
 
 Dart_Handle HandleError(Dart_Handle handle) {
   if (Dart_IsError(handle)) {
     Dart_PropagateError(handle);
   }
   return handle;
+}
+
+int64_t HandleToInt(Dart_Handle handle) {
+  int64_t value;
+  HandleError(Dart_IntegerToInt64(HandleError(handle), &value));
+  return value;
 }
 
 string HandleToString(Dart_Handle handle) {
@@ -135,42 +144,6 @@ void OnNotification(Notification const* _notification, void* _context) {
   Dart_CObject message;
 
   switch( notificationType ) {
-  //   case Notification::Type_ValueAdded:
-  //   {
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       // Add the new value to our list
-  //       nodeInfo->m_values.push_back( _notification->GetValueID() );
-  //     }
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_ValueRemoved:
-  //   {
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       // Remove the value from out list
-  //       for( list<ValueID>::iterator it = nodeInfo->m_values.begin(); it != nodeInfo->m_values.end(); ++it )
-  //       {
-  //         if( (*it) == _notification->GetValueID() )
-  //         {
-  //           nodeInfo->m_values.erase( it );
-  //           break;
-  //         }
-  //       }
-  //     }
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_ValueChanged:
-  //   {
-  //     // One of the node values has changed
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       nodeInfo = nodeInfo;    // placeholder for real action
-  //     }
-  //     break;
-  //   }
   //
   //   case Notification::Type_Group:
   //   {
@@ -255,7 +228,8 @@ void OnNotification(Notification const* _notification, void* _context) {
   //   case Notification::Type_NodeProtocolInfo:
   //   case Notification::Type_NodeQueriesComplete:
 
-    case Notification::Type_NodeAdded: {
+    case Notification::Type_NodeAdded:
+    case Notification::Type_NodeRemoved: {
       Dart_CObject notificationTypeValue = {
         Dart_CObject_kInt32, { .as_int32 = notificationType }
       };
@@ -265,16 +239,64 @@ void OnNotification(Notification const* _notification, void* _context) {
       Dart_CObject nodeId = {
         Dart_CObject_kInt32, { .as_int32 = _notification->GetNodeId() }
       };
-      Dart_CObject* values[3] = {
+      Dart_CObject* messageParts[3] = {
         &notificationTypeValue,
         &homeId,
         &nodeId,
       };
       message.type = Dart_CObject_kArray;
       message.value.as_array.length = 3;
-      message.value.as_array.values = values;
+      message.value.as_array.values = messageParts;
       break;
     }
+
+    case Notification::Type_ValueAdded:
+    case Notification::Type_ValueChanged:
+    case Notification::Type_ValueRefreshed:
+    case Notification::Type_ValueRemoved: {
+      ValueID vid = _notification->GetValueID();
+      Dart_CObject notificationTypeValue = {
+        Dart_CObject_kInt32, { .as_int32 = notificationType }
+      };
+      Dart_CObject homeId = {
+        Dart_CObject_kInt64, { .as_int64 = _notification->GetHomeId() }
+      };
+      Dart_CObject nodeId = {
+        Dart_CObject_kInt32, { .as_int32 = _notification->GetNodeId() }
+      };
+      Dart_CObject valueId = {
+        Dart_CObject_kInt64, { .as_int64 = vid.GetId() }
+      };
+
+      if (notificationType == Notification::Type_ValueAdded) {
+        Dart_CObject valueType = {
+          Dart_CObject_kInt32, { .as_int32 = vid.GetType() }
+        };
+        Dart_CObject* messageParts[5] = {
+          &notificationTypeValue,
+          &homeId,
+          &nodeId,
+          &valueId,
+          &valueType,
+        };
+        message.type = Dart_CObject_kArray;
+        message.value.as_array.length = 5;
+        message.value.as_array.values = messageParts;
+
+      } else {
+        Dart_CObject* messageParts[4] = {
+          &notificationTypeValue,
+          &homeId,
+          &nodeId,
+          &valueId,
+        };
+        message.type = Dart_CObject_kArray;
+        message.value.as_array.length = 4;
+        message.value.as_array.values = messageParts;
+      }
+      break;
+    }
+
     default: {
       message.type = Dart_CObject_kInt32;
       message.value.as_int32 = notificationType;
@@ -308,10 +330,9 @@ void initialize(Dart_NativeArguments arguments) {
   HandleError(Dart_SendPortGetId(port_obj, &notificationPort));
 
   LogLevel logLevel = LogLevel_Alert;
-  Dart_Handle logLevel_obj = Dart_GetNativeArgument(arguments, 3);
+  Dart_Handle logLevel_obj = HandleError(Dart_GetNativeArgument(arguments, 3));
   if (!Dart_IsNull(logLevel_obj)) {
-    int64_t logLevel_int;
-    HandleError(Dart_IntegerToInt64(logLevel_obj, &logLevel_int));
+    int64_t logLevel_int = HandleToInt(logLevel_obj);
     if      (logLevel_int >= 2000) logLevel = LogLevel_None; // OFF
     else if (logLevel_int >= 1900) logLevel = LogLevel_Always;
     else if (logLevel_int >= 1200) logLevel = LogLevel_Fatal; // SHOUT
@@ -377,6 +398,185 @@ void connect(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Get the basic type of a node
+// _getNodeBasic(int networkId, int nodeId) native "getNodeBasic";
+void getNodeBasic(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 value = Manager::Get()->GetNodeBasic(homeId, nodeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(value)));
+  Dart_ExitScope();
+}
+
+// Get the generic type of a node
+// _getNodeGeneric(int networkId, int nodeId) native "getNodeGeneric";
+void getNodeGeneric(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 value = Manager::Get()->GetNodeGeneric(homeId, nodeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(value)));
+  Dart_ExitScope();
+}
+
+// Get the specific type of a node
+// _getNodeSpecific(int networkId, int nodeId) native "getNodeSpecific";
+void getNodeSpecific(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 value = Manager::Get()->GetNodeSpecific(homeId, nodeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(value)));
+  Dart_ExitScope();
+}
+
+// Get a human-readable label describing the node
+// _getNodeType(int networkId, int nodeId) native "getNodeType";
+void getNodeType(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeType(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Return a ValidID for arguments 1 (homeId) and 2 (valueId).
+// The returned object *must* be deleted after use.
+ValueID* ArgsToNewValueID(Dart_NativeArguments arguments) {
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint64 valueId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  ValueID* vid = new ValueID(homeId, valueId);
+}
+
+// Gets a value as a bool.
+// _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
+void getValueAsBool(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  bool boolValue;
+  Manager::Get()->GetValueAsBool(*vid, &boolValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(boolValue)));
+  Dart_ExitScope();
+}
+
+// Gets a value as a byte.
+// _getValueAsByte(int networkId, int valueId) native "getValueAsByte";
+void getValueAsByte(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  uint8 byteValue;
+  Manager::Get()->GetValueAsByte(*vid, &byteValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(byteValue)));
+  Dart_ExitScope();
+}
+
+// Gets a value as an integer.
+// _getValueAsInt(int networkId, int id) native "getValueAsInt";
+void getValueAsInt(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int32 intValue;
+  Manager::Get()->GetValueAsInt(*vid, &intValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(intValue)));
+  Dart_ExitScope();
+}
+
+// Gets a value as a short.
+// _getValueAsShort(int networkId, int id) native "getValueAsShort";
+void getValueAsShort(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int16 shortValue;
+  Manager::Get()->GetValueAsShort(*vid, &shortValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(shortValue)));
+  Dart_ExitScope();
+}
+
+// Gets a value as a string.
+// _getValueAsString(int networkId, int id) native "getValueAsString";
+void getValueAsString(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string stringValue;
+  Manager::Get()->GetValueAsString(*vid, &stringValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewStringFromCString(stringValue.c_str())));
+  Dart_ExitScope();
+}
+
+// Gets the list of items from a list value.
+// _getValueListItems(int networkId, int id) native "getValueListItems";
+void getValueListItems(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+
+  ValueID* vid = ArgsToNewValueID(arguments);
+  vector<string> listItems;
+  Manager::Get()->GetValueListItems(*vid, &listItems);
+  delete vid;
+
+  vector<string>::size_type len = listItems.size();
+  Dart_Handle list = HandleError(Dart_NewList(len));
+  for (unsigned index = 0; index < len; ++index) {
+    string item = listItems.at(index);
+    HandleError(Dart_ListSetAt(list, index, HandleError(Dart_NewStringFromCString(item.c_str()))));
+  }
+
+  Dart_SetReturnValue(arguments, list);
+  Dart_ExitScope();
+}
+
+// Gets the selected item from a list (as a string).
+// _getValueListSelection(int networkId, int id) native "getValueListSelection";
+void getValueListSelection(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string stringValue;
+  Manager::Get()->GetValueListSelection(*vid, &stringValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewStringFromCString(stringValue.c_str())));
+  Dart_ExitScope();
+}
+
+// Gets the selected item from a list (as a string).
+// _getValueListSelectionIndex(int networkId, int id) native "getValueListSelectionIndex";
+void getValueListSelectionIndex(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int32 intValue;
+  Manager::Get()->GetValueListSelection(*vid, &intValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(intValue)));
+  Dart_ExitScope();
+}
+
+// Get the minimum for an integer value.
+// _getValueMin(int networkId, int id) native "getValueMin";
+void getValueMin(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int32 minValue = Manager::Get()->GetValueMin(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(minValue)));
+  Dart_ExitScope();
+}
+
+// Get the maximum for an integer value.
+// _getValueMax(int networkId, int id) native "getValueMax";
+void getValueMax(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int32 maxValue = Manager::Get()->GetValueMax(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(maxValue)));
+  Dart_ExitScope();
+}
+
 // Return the OpenZWave Version
 // String version() native "version";
 void version(Dart_NativeArguments arguments) {
@@ -395,6 +595,20 @@ struct FunctionLookup {
 
 FunctionLookup function_list[] = {
   {"connect", connect},
+  {"getNodeBasic", getNodeBasic},
+  {"getNodeGeneric", getNodeGeneric},
+  {"getNodeSpecific", getNodeSpecific},
+  {"getNodeType", getNodeType},
+  {"getValueAsBool", getValueAsBool},
+  {"getValueAsByte", getValueAsByte},
+  {"getValueAsInt", getValueAsInt},
+  {"getValueAsShort", getValueAsShort},
+  {"getValueAsString", getValueAsString},
+  {"getValueListItems", getValueListItems},
+  {"getValueListSelection", getValueListSelection},
+  {"getValueListSelectionIndex", getValueListSelectionIndex},
+  {"getValueMin", getValueMin},
+  {"getValueMax", getValueMax},
   {"initialize", initialize},
   {"version", version},
   {NULL, NULL}

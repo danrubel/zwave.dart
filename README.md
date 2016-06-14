@@ -25,7 +25,7 @@ Use the MinOZW example that is included in the Open Z-Wave library to ensure
 that the Open Z-Wave library is installed correctly and can communicate with
 your devices using your Z-Wave Controller.
 
-Activate the zwave package using the
+Activate this zwave package using the
 [pub global](https://www.dartlang.org/tools/pub/cmd/pub-global.html) command.
 ```
     pub global activate zwave

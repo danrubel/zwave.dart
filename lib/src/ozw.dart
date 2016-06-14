@@ -16,16 +16,20 @@ class OZW extends ZWave {
   StreamSubscription _notificationSubscription;
 
   /// A map of {networkId --> map of {nodeId --> device}}
-  Map<int, Map<int, Device>> _deviceMap = <int, Map<int, Device>>{};
-
-  /// A list of known devices;
-  List<Device> _devices = <Device>[];
+  Map<int, Map<int, _OZWDevice>> _networkDeviceMap =
+      <int, Map<int, _OZWDevice>>{};
 
   Completer _driverConnected;
   Completer _devicesUpdated;
 
   @override
-  List<Device> get devices => new List<Device>.unmodifiable(_devices);
+  List<Device> get devices {
+    List<Device> result = <Device>[];
+    for (Map<int, _OZWDevice> network in _networkDeviceMap.values) {
+      result.addAll(network.values);
+    }
+    return result;
+  }
 
   @override
   String get version native "version";
@@ -74,10 +78,14 @@ class OZW extends ZWave {
   /// If the message is an integer, then it is the notification type.
   void _processNotification(dynamic message) {
     int notificationIndex;
+    int networkId;
+    int nodeId;
     if (message is int) {
       notificationIndex = message;
     } else if (message is List) {
       notificationIndex = message[0];
+      networkId = message[1];
+      nodeId = message[2];
     } else {
       throw 'Unexpected message: $message';
     }
@@ -100,17 +108,77 @@ class OZW extends ZWave {
         return;
 
       case NotificationIndex_NodeAdded:
-        int networkId = message[1];
-        int nodeId = message[2];
-        Map<int, Device> network = _deviceMap.putIfAbsent(networkId, () {
+        Map<int, _OZWDevice> network =
+            _networkDeviceMap.putIfAbsent(networkId, () {
           return <int, Device>{};
         });
         Device device = network.putIfAbsent(nodeId, () {
-          Device device = new Device(networkId, nodeId);
-          _devices.add(device);
+          Device device = new _OZWDevice(this, networkId, nodeId);
           return device;
         });
         device.lastMsgTime = new DateTime.now();
+        return;
+
+      case NotificationIndex_NodeRemoved:
+        _networkDeviceMap[networkId]?.remove(nodeId);
+        return;
+
+      case NotificationIndex_ValueAdded:
+        print('>>> value added: $message');
+        Map<int, _OZWDevice> network = _networkDeviceMap[networkId];
+        if (network != null) {
+          _OZWDevice device = network[nodeId];
+          if (device != null) {
+            int valueId = message[3];
+            // If value id does not fit in int64, then abort
+            // TODO adjust value id to fit
+            if (valueId < 0) throw 'value id is too large';
+            _OZWValue value;
+            switch (message[4]) {
+              case ValueTypeIndex_Bool:
+                value = new _OZWBoolValue(device, valueId);
+                break;
+              case ValueTypeIndex_Button:
+                value = new _OZWButtonValue(device, valueId);
+                break;
+              case ValueTypeIndex_Byte:
+                value = new _OZWByteValue(device, valueId);
+                break;
+              case ValueTypeIndex_Int:
+                value = new _OZWIntValue(device, valueId);
+                break;
+              case ValueTypeIndex_List:
+                value = new _OZWListSelectionValue(device, valueId);
+                break;
+              case ValueTypeIndex_Short:
+                value = new _OZWShortValue(device, valueId);
+                break;
+              case ValueTypeIndex_String:
+                value = new _OZWStringValue(device, valueId);
+                break;
+              default:
+                value = new _OZWValue(device, valueId);
+                break;
+            }
+            device._valueMap[valueId] = value;
+          }
+        }
+        return;
+
+      case NotificationIndex_ValueRefreshed:
+      case NotificationIndex_ValueChanged:
+        // Notify clients that value has changed.
+        return;
+
+      case NotificationIndex_ValueRemoved:
+        int valueId = message[3];
+        Map<int, _OZWDevice> network = _networkDeviceMap[networkId];
+        if (network != null) {
+          _OZWDevice device = network[nodeId];
+          if (device != null) {
+            device._valueMap.remove(valueId);
+          }
+        }
         return;
 
       default:
@@ -137,4 +205,140 @@ class OZW extends ZWave {
   /// [notificationPort] is the isolate port used by the native library
   void _initialize(String configPath, SendPort notificationPort, int logLevel)
       native "initialize";
+
+  _getNodeBasic(int networkId, int nodeId) native "getNodeBasic";
+  _getNodeGeneric(int networkId, int nodeId) native "getNodeGeneric";
+  _getNodeSpecific(int networkId, int nodeId) native "getNodeSpecific";
+  _getNodeType(int networkId, int nodeId) native "getNodeType";
+
+  _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
+  _getValueAsByte(int networkId, int id) native "getValueAsByte";
+  _getValueAsInt(int networkId, int id) native "getValueAsInt";
+  _getValueAsShort(int networkId, int id) native "getValueAsShort";
+  _getValueAsString(int networkId, int id) native "getValueAsString";
+
+  _getValueListItems(int networkId, int id) native "getValueListItems";
+  _getValueListSelection(int networkId, int id) native "getValueListSelection";
+  _getValueListSelectionIndex(int networkId, int id)
+      native "getValueListSelectionIndex";
+
+  _getValueMin(int networkId, int id) native "getValueMin";
+  _getValueMax(int networkId, int id) native "getValueMax";
+}
+
+class _OZWDevice extends Device {
+  final OZW zwave;
+  final Map<int, _OZWValue> _valueMap = <int, _OZWValue>{};
+
+  _OZWDevice(this.zwave, int networkId, int nodeId) : super(networkId, nodeId);
+
+  @override
+  int get nodeBasic => zwave._getNodeBasic(networkId, nodeId);
+
+  @override
+  int get nodeGeneric => zwave._getNodeGeneric(networkId, nodeId);
+
+  @override
+  int get nodeSpecific => zwave._getNodeSpecific(networkId, nodeId);
+
+  @override
+  String get nodeType => zwave._getNodeType(networkId, nodeId);
+
+  @override
+  List<Value> get values => new List.from(_valueMap.values);
+}
+
+class _OZWValue implements Value {
+  final _OZWDevice device;
+  final int id;
+
+  _OZWValue(this.device, this.id);
+
+  @override
+  get current => null;
+
+  @override
+  String toString() => 'Value($id)';
+}
+
+class _OZWBoolValue extends _OZWValue implements BoolValue {
+  _OZWBoolValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  bool get current => device.zwave._getValueAsBool(device.networkId, id);
+
+  @override
+  String toString() => 'BoolValue($id)';
+}
+
+class _OZWButtonValue extends _OZWValue implements ButtonValue {
+  _OZWButtonValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  String toString() => 'ButtonValue($id)';
+}
+
+class _OZWByteValue extends _OZWIntValue {
+  _OZWByteValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  int get current => device.zwave._getValueAsByte(device.networkId, id);
+
+  @override
+  String toString() => 'ByteValue($id)';
+}
+
+class _OZWIntValue extends _OZWValue implements IntValue {
+  _OZWIntValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  int get current => device.zwave._getValueAsInt(device.networkId, id);
+
+  @override
+  int get max => device.zwave._getValueMin(device.networkId, id);
+
+  @override
+  int get min => device.zwave._getValueMax(device.networkId, id);
+
+  @override
+  String toString() => 'IntValue($id)';
+}
+
+class _OZWListSelectionValue extends _OZWValue implements ListSelectionValue {
+  _OZWListSelectionValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  String get current =>
+      device.zwave._getValueListSelection(device.networkId, id);
+
+  @override
+  int get currentIndex =>
+      device.zwave._getValueListSelectionIndex(device.networkId, id);
+
+  @override
+  List<String> get list =>
+      device.zwave._getValueListItems(device.networkId, id);
+
+  @override
+  String toString() => 'ListSelectionValue($id)';
+}
+
+class _OZWShortValue extends _OZWIntValue {
+  _OZWShortValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  int get current => device.zwave._getValueAsShort(device.networkId, id);
+
+  @override
+  String toString() => 'ShortValue($id)';
+}
+
+class _OZWStringValue extends _OZWValue implements StringValue {
+  _OZWStringValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  String get current => device.zwave._getValueAsString(device.networkId, id);
+
+  @override
+  String toString() => 'StringValue($id)';
 }

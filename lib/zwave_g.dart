@@ -221,3 +221,19 @@ const int NotificationIndex_ValueAdded = 0;
 const int NotificationIndex_ValueChanged = 2;
 const int NotificationIndex_ValueRefreshed = 3;
 const int NotificationIndex_ValueRemoved = 1;
+
+const int ValueTypeIndex_Bool = 0;
+const int ValueTypeIndex_Button = 8;
+const int ValueTypeIndex_Byte = 1;
+const int ValueTypeIndex_Decimal = 2;
+const int ValueTypeIndex_Int = 3;
+const int ValueTypeIndex_List = 4;
+const int ValueTypeIndex_Raw = 9;
+const int ValueTypeIndex_Schedule = 5;
+const int ValueTypeIndex_Short = 6;
+const int ValueTypeIndex_String = 7;
+
+const int ValueGenreIndex_Basic = 0;
+const int ValueGenreIndex_Config = 2;
+const int ValueGenreIndex_System = 3;
+const int ValueGenreIndex_User = 1;

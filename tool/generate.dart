@@ -1,54 +1,12 @@
 import 'dart:io';
 
+Map<String, EnumValue> notificationTypes;
+Map<String, EnumValue> valueTypes;
+Map<String, EnumValue> valueGenres;
+
 main() {
-  Map<String, NotificationType> notificationTypes = {};
-
-  List<String> lines = new File(Platform.script
-          .resolve('../../open-zwave/cpp/src/Notification.h')
-          .toFilePath())
-      .readAsLinesSync();
-
-  Iterator<String> iter = lines.iterator;
-  while (iter.moveNext()) {
-    // Extract notification types
-    if (iter.current.contains('enum NotificationType')) {
-      NotificationType type;
-      while (iter.moveNext()) {
-        String line = iter.current.trim();
-        if (line == '};') break;
-        if (line == '{') continue;
-        if (line.startsWith('Type_')) {
-          int start = 5;
-          int end = start;
-          while (isIdentifier(line.codeUnitAt(end))) ++end;
-          type = new NotificationType(line.substring(start, end));
-          notificationTypes[type.name] = type;
-          start = end + 1;
-          if (line.substring(start).startsWith(' = ')) {
-            start += 3;
-            end = line.indexOf(',', start);
-            int actualIndex = int.parse(line.substring(start, end));
-            if (actualIndex != type.index) {
-              throw 'Expected ${type.name} index = ${type.index},'
-                  ' but found $actualIndex';
-            }
-          }
-          start = line.indexOf('/**<', start) + 4;
-          String comment = line.substring(start).trim();
-          if (comment.endsWith('*/')) {
-            comment = comment.substring(0, comment.length - 2).trim();
-          }
-          type.comment = comment;
-        } else if (line.startsWith('*')) {
-          String comment = line.substring(1);
-          if (comment.endsWith('*/')) {
-            comment = comment.substring(0, comment.length - 2).trim();
-          }
-          type.comment += ' $comment';
-        }
-      }
-    }
-  }
+  readNotificationTypes();
+  readValueInfo();
   print('--- analysis complete');
 
   StringBuffer out = new StringBuffer('''
@@ -62,9 +20,9 @@ class NotificationType {
 
   NotificationType._(this.index, this.name);
 ''');
-  List<NotificationType> sorted = notificationTypes.values.toList()
-    ..sort(sortNotificationTypeByName);
-  for (NotificationType type in sorted) {
+  List sorted = new List.from(notificationTypes.values)
+    ..sort(sortEnumValueByName);
+  for (EnumValue type in sorted) {
     out.writeln('');
     out.writeln(formatComment(type.comment, 2));
     out.writeln('  static NotificationType ${type.name} =');
@@ -75,8 +33,8 @@ class NotificationType {
   /// A list of notification types sorted by index.
   static List<NotificationType> list = <NotificationType>[
 ''');
-  sorted = notificationTypes.values.toList()..sort(sortNotificationTypeByIndex);
-  for (NotificationType type in sorted) {
+  sorted = new List.from(notificationTypes.values)..sort(sortEnumValueByIndex);
+  for (EnumValue type in sorted) {
     out.write('    ');
     out.write(type.name);
     out.write(',');
@@ -84,17 +42,101 @@ class NotificationType {
     out.write('// ');
     out.writeln(type.index.toString());
   }
-  out.write('''  ];
+  out.writeln('  ];');
+  out.writeln('}');
+
+  generateIndices(out, notificationTypes, addPrefix: 'NotificationIndex_');
+  generateIndices(out, valueTypes, addPrefix: 'ValueTypeIndex_');
+  generateIndices(out, valueGenres, addPrefix: 'ValueGenreIndex_');
+
+  String path = Platform.script.resolve('../lib/zwave_g.dart').toFilePath();
+  print('writing $path');
+  new File(path).writeAsStringSync(out.toString());
+  print('--- generation complete');
 }
 
-''');
-  sorted = notificationTypes.values.toList()..sort(sortNotificationTypeByName);
-  for (NotificationType type in sorted) {
-    out.writeln('const int NotificationIndex_${type.name} = ${type.index};');
+void generateIndices(StringBuffer out, Map<String, EnumValue> values,
+    {String addPrefix: ''}) {
+  out.writeln();
+  List<EnumValue> sorted = new List.from(values.values)
+    ..sort(sortEnumValueByName);
+  for (EnumValue value in sorted) {
+    out.writeln('const int $addPrefix${value.name} = ${value.index};');
   }
-  new File(Platform.script.resolve('../lib/zwave.g.dart').toFilePath())
-      .writeAsStringSync(out.toString());
-  print('--- generation complete');
+}
+
+void readNotificationTypes() {
+  List<String> lines = new File(Platform.script
+          .resolve('../../open-zwave/cpp/src/Notification.h')
+          .toFilePath())
+      .readAsLinesSync();
+  Iterator<String> iter = lines.iterator;
+  while (iter.moveNext()) {
+    if (iter.current.contains('enum NotificationType')) {
+      notificationTypes = readEnumValues(iter, stripPrefix: 'Type_');
+    }
+  }
+}
+
+void readValueInfo() {
+  List<String> lines = new File(Platform.script
+          .resolve('../../open-zwave/cpp/src/value_classes/ValueID.h')
+          .toFilePath())
+      .readAsLinesSync();
+  Iterator<String> iter = lines.iterator;
+  while (iter.moveNext()) {
+    if (iter.current.contains('enum ValueType')) {
+      valueTypes = readEnumValues(iter,
+          stripPrefix: 'ValueType_', ignore: 'ValueType_Max');
+    }
+    if (iter.current.contains('enum ValueGenre')) {
+      valueGenres = readEnumValues(iter,
+          stripPrefix: 'ValueGenre_', ignore: 'ValueGenre_Count');
+    }
+  }
+}
+
+Map<String, EnumValue> readEnumValues(Iterator<String> iter,
+    {String stripPrefix, String ignore, String appendSuffix: ''}) {
+  Map<String, EnumValue> values = {};
+  EnumValue value;
+  EnumValue.resetCurrentIndex();
+  while (iter.moveNext()) {
+    String line = iter.current.trim();
+    if (line == '};') break;
+    if (line == '{') continue;
+    if (ignore != null && line.startsWith(ignore)) continue;
+    if (line.startsWith(stripPrefix)) {
+      int start = stripPrefix.length;
+      int end = start;
+      while (isIdentifier(line.codeUnitAt(end))) ++end;
+      value = new EnumValue(line.substring(start, end) + appendSuffix);
+      values[value.name] = value;
+      start = end + 1;
+      if (line.substring(start).startsWith(' = ')) {
+        start += 3;
+        end = line.indexOf(',', start);
+        int actualIndex = int.parse(line.substring(start, end));
+        if (actualIndex != value.index) {
+          throw 'Expected ${value.name} index = ${value.index},'
+              ' but found $actualIndex';
+        }
+      }
+      start = line.indexOf('/**<', start) + 4;
+      String comment = line.substring(start).trim();
+      if (comment.endsWith('*/')) {
+        comment = comment.substring(0, comment.length - 2).trim();
+      }
+      value.comment = comment;
+    } else if (line.startsWith('*')) {
+      String comment = line.substring(1);
+      if (comment.endsWith('*/')) {
+        comment = comment.substring(0, comment.length - 2).trim();
+      }
+      value.comment += ' $comment';
+    }
+  }
+  return values;
 }
 
 String formatComment(String comment, int indent) {
@@ -116,14 +158,17 @@ String formatComment(String comment, int indent) {
   return out.toString();
 }
 
-class NotificationType {
-  static int _currentIndex = -1;
+class EnumValue {
+  static int _currentIndex;
+  static void resetCurrentIndex() {
+    _currentIndex = -1;
+  }
 
   final int index = ++_currentIndex;
   final String name;
   String comment = '';
 
-  NotificationType(this.name);
+  EnumValue(this.name) {}
 }
 
 int cA = 'A'.codeUnitAt(0);
@@ -135,8 +180,6 @@ int c_ = '_'.codeUnitAt(0);
 bool isIdentifier(int c) =>
     (cA <= c && c <= cZ) || (ca <= c && c <= cz) || c == c_;
 
-int sortNotificationTypeByName(NotificationType a, NotificationType b) =>
-    a.name.compareTo(b.name);
+int sortEnumValueByName(EnumValue a, EnumValue b) => a.name.compareTo(b.name);
 
-int sortNotificationTypeByIndex(NotificationType a, NotificationType b) =>
-    a.index - b.index;
+int sortEnumValueByIndex(EnumValue a, EnumValue b) => a.index - b.index;
