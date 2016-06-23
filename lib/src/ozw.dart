@@ -20,7 +20,8 @@ class OZW extends ZWave {
       <int, Map<int, _OZWDevice>>{};
 
   Completer _driverConnected;
-  Completer _devicesUpdated;
+  Completer _awakeDevicesUpdated;
+  Completer _allDevicesUpdated;
 
   @override
   List<Device> get devices {
@@ -49,7 +50,8 @@ class OZW extends ZWave {
   @override
   Future connect(String port) {
     _driverConnected = new Completer();
-    _devicesUpdated = new Completer();
+    _awakeDevicesUpdated = new Completer();
+    _allDevicesUpdated = new Completer();
     Future future = _driverConnected.future;
     _connect(port);
     return future;
@@ -57,12 +59,15 @@ class OZW extends ZWave {
 
   @override
   Future update() {
-    if (_devicesUpdated == null) {
+    if (_awakeDevicesUpdated == null) {
       // trigger an update of all known devices
       throw 'not implemented yet';
     }
-    return _devicesUpdated.future;
+    return _awakeDevicesUpdated.future;
   }
+
+  @override
+  Future allUpdated() => _allDevicesUpdated?.future ?? new Future.value();
 
   @override
   Future dispose() async {
@@ -70,6 +75,7 @@ class OZW extends ZWave {
     _notificationSubscription = null;
     _notificationPort?.close();
     _notificationPort = null;
+    _destroy();
   }
 
   // ===== Internal =======================================================
@@ -91,23 +97,29 @@ class OZW extends ZWave {
     }
 
     switch (notificationIndex) {
-      case NotificationIndex_DriverReady:
+      case NotificationType.DriverReady:
         _driverConnected?.complete();
         _driverConnected = null;
         return;
-      case NotificationIndex_DriverFailed:
+      case NotificationType.DriverFailed:
         _driverConnected?.completeError('Failed to load Open Z-Wave driver');
         _driverConnected = null;
         return;
 
-      case NotificationIndex_AllNodesQueried:
-      case NotificationIndex_AllNodesQueriedSomeDead:
-      case NotificationIndex_AwakeNodesQueried:
-        _devicesUpdated?.complete();
-        _devicesUpdated = null;
+      case NotificationType.AwakeNodesQueried:
+        _awakeDevicesUpdated?.complete();
+        _awakeDevicesUpdated = null;
         return;
 
-      case NotificationIndex_NodeAdded:
+      case NotificationType.AllNodesQueried:
+      case NotificationType.AllNodesQueriedSomeDead:
+        _awakeDevicesUpdated?.complete();
+        _awakeDevicesUpdated = null;
+        _allDevicesUpdated?.complete();
+        _allDevicesUpdated = null;
+        return;
+
+      case NotificationType.NodeAdded:
         Map<int, _OZWDevice> network =
             _networkDeviceMap.putIfAbsent(networkId, () {
           return <int, Device>{};
@@ -119,12 +131,11 @@ class OZW extends ZWave {
         device.lastMsgTime = new DateTime.now();
         return;
 
-      case NotificationIndex_NodeRemoved:
+      case NotificationType.NodeRemoved:
         _networkDeviceMap[networkId]?.remove(nodeId);
         return;
 
-      case NotificationIndex_ValueAdded:
-        print('>>> value added: $message');
+      case NotificationType.ValueAdded:
         Map<int, _OZWDevice> network = _networkDeviceMap[networkId];
         if (network != null) {
           _OZWDevice device = network[nodeId];
@@ -135,25 +146,25 @@ class OZW extends ZWave {
             if (valueId < 0) throw 'value id is too large';
             _OZWValue value;
             switch (message[4]) {
-              case ValueTypeIndex_Bool:
+              case ValueType.Bool:
                 value = new _OZWBoolValue(device, valueId);
                 break;
-              case ValueTypeIndex_Button:
+              case ValueType.Button:
                 value = new _OZWButtonValue(device, valueId);
                 break;
-              case ValueTypeIndex_Byte:
+              case ValueType.Byte:
                 value = new _OZWByteValue(device, valueId);
                 break;
-              case ValueTypeIndex_Int:
+              case ValueType.Int:
                 value = new _OZWIntValue(device, valueId);
                 break;
-              case ValueTypeIndex_List:
+              case ValueType.List:
                 value = new _OZWListSelectionValue(device, valueId);
                 break;
-              case ValueTypeIndex_Short:
+              case ValueType.Short:
                 value = new _OZWShortValue(device, valueId);
                 break;
-              case ValueTypeIndex_String:
+              case ValueType.String:
                 value = new _OZWStringValue(device, valueId);
                 break;
               default:
@@ -165,12 +176,12 @@ class OZW extends ZWave {
         }
         return;
 
-      case NotificationIndex_ValueRefreshed:
-      case NotificationIndex_ValueChanged:
-        // Notify clients that value has changed.
+      case NotificationType.ValueChanged:
+      case NotificationType.ValueRefreshed:
+        print('>>> ${NotificationType.name(notificationIndex)}: $message');
         return;
 
-      case NotificationIndex_ValueRemoved:
+      case NotificationType.ValueRemoved:
         int valueId = message[3];
         Map<int, _OZWDevice> network = _networkDeviceMap[networkId];
         if (network != null) {
@@ -182,8 +193,7 @@ class OZW extends ZWave {
         return;
 
       default:
-        // NotificationType type = NotificationType.list[notificationIndex];
-        // print('>>> notification: ${type.name} $message');
+        print('>>> ${NotificationType.name(notificationIndex)}: $message');
         return;
     }
   }
@@ -206,10 +216,18 @@ class OZW extends ZWave {
   void _initialize(String configPath, SendPort notificationPort, int logLevel)
       native "initialize";
 
+  _destroy() native "destroy";
+
   _getNodeBasic(int networkId, int nodeId) native "getNodeBasic";
   _getNodeGeneric(int networkId, int nodeId) native "getNodeGeneric";
   _getNodeSpecific(int networkId, int nodeId) native "getNodeSpecific";
   _getNodeType(int networkId, int nodeId) native "getNodeType";
+
+  _getNodeManufacturerId(int networkId, int nodeId) native "getNodeManufacturerId";
+  _getNodeManufacturerName(int networkId, int nodeId) native "getNodeManufacturerName";
+  _getNodeProductId(int networkId, int nodeId) native "getNodeProductId";
+  _getNodeProductName(int networkId, int nodeId) native "getNodeProductName";
+  _getNodeProductType(int networkId, int nodeId) native "getNodeProductType";
 
   _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
   _getValueAsByte(int networkId, int id) native "getValueAsByte";
@@ -243,6 +261,22 @@ class _OZWDevice extends Device {
 
   @override
   String get nodeType => zwave._getNodeType(networkId, nodeId);
+
+  @override
+  String get manufacturerId => zwave._getNodeManufacturerId(networkId, nodeId);
+
+  @override
+  String get manufacturerName =>
+      zwave._getNodeManufacturerName(networkId, nodeId);
+
+  @override
+  String get productId => zwave._getNodeProductId(networkId, nodeId);
+
+  @override
+  String get productName => zwave._getNodeProductName(networkId, nodeId);
+
+  @override
+  String get productType => zwave._getNodeProductType(networkId, nodeId);
 
   @override
   List<Value> get values => new List.from(_valueMap.values);

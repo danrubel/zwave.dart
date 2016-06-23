@@ -27,6 +27,11 @@ class MockZWave implements ZWave {
   }
 
   @override
+  Future allUpdated() async {
+    // TODO: implement allUpdated
+  }
+
+  @override
   Future dispose() async {
     // TODO: implement dispose
   }

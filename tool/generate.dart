@@ -13,41 +13,11 @@ main() {
 part of zwave;
 
 // Generated code
-
-class NotificationType {
-  final int index;
-  final String name;
-
-  NotificationType._(this.index, this.name);
 ''');
-  List sorted = new List.from(notificationTypes.values)
-    ..sort(sortEnumValueByName);
-  for (EnumValue type in sorted) {
-    out.writeln('');
-    out.writeln(formatComment(type.comment, 2));
-    out.writeln('  static NotificationType ${type.name} =');
-    out.writeln('      new NotificationType._(${type.index}, "${type.name}");');
-  }
-  out.write('''
 
-  /// A list of notification types sorted by index.
-  static List<NotificationType> list = <NotificationType>[
-''');
-  sorted = new List.from(notificationTypes.values)..sort(sortEnumValueByIndex);
-  for (EnumValue type in sorted) {
-    out.write('    ');
-    out.write(type.name);
-    out.write(',');
-    for (int i = 0; i < 30 - type.name.length; ++i) out.write(' ');
-    out.write('// ');
-    out.writeln(type.index.toString());
-  }
-  out.writeln('  ];');
-  out.writeln('}');
-
-  generateIndices(out, notificationTypes, addPrefix: 'NotificationIndex_');
-  generateIndices(out, valueTypes, addPrefix: 'ValueTypeIndex_');
-  generateIndices(out, valueGenres, addPrefix: 'ValueGenreIndex_');
+  generate(out, notificationTypes, 'NotificationType');
+  generate(out, valueTypes, 'ValueType');
+  generate(out, valueGenres, 'ValueGenre');
 
   String path = Platform.script.resolve('../lib/zwave_g.dart').toFilePath();
   print('writing $path');
@@ -55,14 +25,31 @@ class NotificationType {
   print('--- generation complete');
 }
 
-void generateIndices(StringBuffer out, Map<String, EnumValue> values,
-    {String addPrefix: ''}) {
+void generate(StringBuffer out, Map<String, EnumValue> values, String name) {
+  List<EnumValue> sorted;
   out.writeln();
-  List<EnumValue> sorted = new List.from(values.values)
-    ..sort(sortEnumValueByName);
+  out.writeln('class $name {');
+
+  sorted = new List.from(values.values)..sort(sortEnumValueByName);
   for (EnumValue value in sorted) {
-    out.writeln('const int $addPrefix${value.name} = ${value.index};');
+    out.writeln('  static const int ${value.name} = ${value.index};');
   }
+  out.writeln();
+
+  sorted = new List.from(values.values)..sort(sortEnumValueByIndex);
+  out.writeln('  static core.List<core.String> names = <core.String>[');
+  for (EnumValue value in sorted) {
+    out.writeln('    "${value.name}", // ${value.index}');
+  }
+  out.write('''  ];
+
+  static core.String name(int index) {
+    if (index != null && index >= 0 && index < names.length)
+      return names[index];
+    return 'Unknown$name';
+  }
+}
+''');
 }
 
 void readNotificationTypes() {

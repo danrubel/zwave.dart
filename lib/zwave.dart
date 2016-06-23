@@ -1,6 +1,8 @@
 library zwave;
 
 import 'dart:async';
+import 'dart:core';
+import 'dart:core' as core;
 
 import 'package:logging/logging.dart';
 
@@ -39,8 +41,15 @@ abstract class ZWave {
   Future connect(String port);
 
   /// Update (or finish updating) the list of known devices.
-  /// Returns a future when the update is complete.
+  /// Returns a future when all nodes (or all awake nodes) have been updated
+  /// and the zwave manager is ready for commands.
+  /// Before this future completes, messages to the zwave manager
+  /// can cause a segfault.
   Future update();
+
+  /// Return a future that completes when information for all devices,
+  /// including sleeping devices, has been updated.
+  Future allUpdated();
 
   /// Disconnect from the Z-Wave controller and cleanup any resources.
   /// Returns a [Future] that completes when the process is complete.
@@ -62,6 +71,21 @@ abstract class Device {
 
   /// Return a human-readable label describing the node.
   String get nodeType;
+
+  /// Return the manufacturer's Z-Wave identifier, a four digit hex code.
+  String get manufacturerId;
+
+  /// Return the manufacturer's name.
+  String get manufacturerName;
+
+  /// Return the manufacturer's product ID, a four digit hex code.
+  String get productId;
+
+  /// Return the manufacturer's product name.
+  String get productName;
+
+  /// Return the manufacturer's product type, a four digit hex code.
+  String get productType;
 
   /// The last time a message was received from this device.
   DateTime lastMsgTime;
@@ -130,8 +154,7 @@ abstract class ListSelectionValue extends Value {
 
 /// Abstract representation of a specific schedule value.
 /// See [ValueType.ScheduleType].
-abstract class ScheduleValue extends Value {
-}
+abstract class ScheduleValue extends Value {}
 
 /// Abstract representation of a specific button value.
 /// See [ValueType.ButtonType].
@@ -142,5 +165,4 @@ abstract class ButtonValue extends Value {
 
 /// Abstract representation of a specific raw value.
 /// See [ValueType.RawType].
-abstract class RawValue extends Value {
-}
+abstract class RawValue extends Value {}

@@ -398,6 +398,13 @@ void connect(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Deletes the Manager and cleans up any associated objects.
+void destroy(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  Manager::Destroy();
+  Dart_ExitScope();
+}
+
 // Get the basic type of a node
 // _getNodeBasic(int networkId, int nodeId) native "getNodeBasic";
 void getNodeBasic(Dart_NativeArguments arguments) {
@@ -438,6 +445,61 @@ void getNodeType(Dart_NativeArguments arguments) {
   uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
   uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
   string text = Manager::Get()->GetNodeType(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Get the manufacturer ID of a device, a four digit hex code.
+// _getNodeManufacturerId(int networkId, int nodeId) native "getNodeManufacturerId";
+void getNodeManufacturerId(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeManufacturerId(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Get the manufacturer name of a device.
+// _getNodeManufacturerName(int networkId, int nodeId) native "getNodeManufacturerName";
+void getNodeManufacturerName(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeManufacturerName(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Get the product ID of a device, a four digit hex code.
+// _getNodeProductId(int networkId, int nodeId) native "getNodeProductId";
+void getNodeProductId(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeProductId(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Get the product name of a device.
+// _getNodeProductName(int networkId, int nodeId) native "getNodeProductName";
+void getNodeProductName(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeProductName(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Get the product type of a device, a four digit hex code.
+// _getNodeProductType(int networkId, int nodeId) native "getNodeProductType";
+void getNodeProductType(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeProductType(homeId, nodeId);
   Dart_SetReturnValue(arguments, StringToHandle(text));
   Dart_ExitScope();
 }
@@ -595,10 +657,16 @@ struct FunctionLookup {
 
 FunctionLookup function_list[] = {
   {"connect", connect},
+  {"destroy", destroy},
   {"getNodeBasic", getNodeBasic},
   {"getNodeGeneric", getNodeGeneric},
   {"getNodeSpecific", getNodeSpecific},
   {"getNodeType", getNodeType},
+  {"getNodeManufacturerId", getNodeManufacturerId},
+  {"getNodeManufacturerName", getNodeManufacturerName},
+  {"getNodeProductId", getNodeProductId},
+  {"getNodeProductName", getNodeProductName},
+  {"getNodeProductType", getNodeProductType},
   {"getValueAsBool", getValueAsBool},
   {"getValueAsByte", getValueAsByte},
   {"getValueAsInt", getValueAsInt},
