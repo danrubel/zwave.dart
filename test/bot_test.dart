@@ -42,25 +42,18 @@ main(List<String> args) async {
       await zwave.allUpdated();
     }
     for (Device device in zwave.devices) {
-      print('  $device');
-      print('    ${device.nodeBasic} ${device.nodeGeneric}'
-          ' ${device.nodeSpecific} ${device.nodeType}');
-      print('    ${device.manufacturerId} ${device.manufacturerName}');
-      print('    ${device.productId} ${device.productType}'
-          ' ${device.productName}');
-      for (Value value in device.values) {
-        var buf = new StringBuffer('      $value');
+      print('  $device - ${device.manufacturerName} ${device.productName}');
+      for (Value value in device.userValues) {
+        var buf = new StringBuffer('      ${value.label} ($value)');
         while (buf.length < 50) buf.write(' ');
         buf.write(' = ${value.current}');
-        while (buf.length < 60) buf.write(' ');
         if (value is ListSelectionValue) {
           buf.write(' - ${value.currentIndex}');
         }
         print(buf);
         if (value is IntValue) {
           print('        min ${value.min}, max ${value.max}');
-        }
-        if (value is ListSelectionValue) {
+        } else if (value is ListSelectionValue) {
           var buf = new StringBuffer('        ');
           for (String item in value.list) {
             buf.write('$item, ');

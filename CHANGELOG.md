@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+* add value label accessor
+* add value genre and device userValues accessors
+* improve docs
+
 ## 0.1.3
 * add device accessors for product and manufacturer information
 * write network config to file on shutdown

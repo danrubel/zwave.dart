@@ -1,13 +1,17 @@
 # zwave.dart
 
-zwave is a Dart library for interacting with Z-Wave devices.
+zwave is a Dart package for interacting with Z-Wave devices.
 
 ## Overview
 
-This Dart library uses the
+This Dart package uses the
 [Open Z-Wave library](https://github.com/OpenZWave/open-zwave/)
 to communicate with a compatible Z-Wave Controller
 and interact with Z-Wave devices.
+
+## Usage
+
+See the **zwave library** for more about how to interact with Z-Wave devices.
 
 ## Requirements
 

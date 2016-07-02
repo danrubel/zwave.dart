@@ -242,6 +242,9 @@ class OZW extends ZWave {
 
   _getValueMin(int networkId, int id) native "getValueMin";
   _getValueMax(int networkId, int id) native "getValueMax";
+
+  _getValueGenre(int networkId, int id) native "getValueGenre";
+  _getValueLabel(int networkId, int id) native "getValueLabel";
 }
 
 class _OZWDevice extends Device {
@@ -290,6 +293,12 @@ class _OZWValue implements Value {
 
   @override
   get current => null;
+
+  @override
+  int get genre => device.zwave._getValueGenre(device.networkId, id);
+
+  @override
+  String get label => device.zwave._getValueLabel(device.networkId, id);
 
   @override
   String toString() => 'Value($id)';

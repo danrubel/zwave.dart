@@ -1,3 +1,18 @@
+/// This Dart library uses the
+/// [Open Z-Wave library](https://github.com/OpenZWave/open-zwave/)
+/// to communicate with a compatible Z-Wave Controller
+/// and interact with Z-Wave devices.
+///
+/// # Using
+/// Start by initializing the Z-Wave manager singleton:
+///
+///     ZWave zwave = await ZWave.init(configPath);
+///
+/// When you first initialize the Z-Wave manager, it probes the Z-Wave network
+/// to discover all connected devices. On shutdown (when [dispose] is called),
+/// this information is written to the Z-Wave network configuration to a file.
+/// On subsequent starts, the network configuration is loaded from this file
+/// rather than probing the network.
 library zwave;
 
 import 'dart:async';
@@ -51,7 +66,10 @@ abstract class ZWave {
   /// including sleeping devices, has been updated.
   Future allUpdated();
 
-  /// Disconnect from the Z-Wave controller and cleanup any resources.
+  /// Disconnect from the Z-Wave controller, cleanup any resources, and write
+  /// the Z-Wave network configuration to a file in the current directory.
+  /// The filename consists of the 8 digit hexadecimal version of the
+  /// controller's Home ID, prefixed with the string 'zwcfg_'.
   /// Returns a [Future] that completes when the process is complete.
   Future dispose();
 }
@@ -100,7 +118,11 @@ abstract class Device {
 
   int get hashCode => networkId * 256 + nodeId;
 
+  /// Return a list of all values associated with the device.
   List<Value> get values;
+
+  /// Return a list of values an ordinary user would be interested in.
+  List<Value> get userValues => values.where((v) => v.genre == ValueGenre.User);
 
   String toString() => 'Device($networkId, $nodeId)';
 }
@@ -109,7 +131,10 @@ abstract class Device {
 abstract class Value {
   Device get device;
   int get id;
+  String get label;
   dynamic get current;
+
+  get genre => null;
 }
 
 /// Abstract representation of a specific [bool] value.

@@ -5,6 +5,9 @@
 .pub
 .project
 .settings
+
 OZW_Log.txt
 packages
 pubspec.lock
+
+doc/

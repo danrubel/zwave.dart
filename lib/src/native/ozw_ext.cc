@@ -568,7 +568,29 @@ void getValueAsString(Dart_NativeArguments arguments) {
   string stringValue;
   Manager::Get()->GetValueAsString(*vid, &stringValue);
   delete vid;
-  Dart_SetReturnValue(arguments, HandleError(Dart_NewStringFromCString(stringValue.c_str())));
+  Dart_SetReturnValue(arguments, StringToHandle(stringValue));
+  Dart_ExitScope();
+}
+
+// Get the genre of the value.
+// _getValueGenre(int networkId, int id) native "getValueGenre";
+void getValueGenre(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  ValueID::ValueGenre genre = vid->GetGenre();
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(genre)));
+  Dart_ExitScope();
+}
+
+// Gets the user-friendly label for the value.
+// _getValueLabel(int networkId, int id) native "getValueLabel";
+void getValueLabel(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string label = Manager::Get()->GetValueLabel(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, StringToHandle(label));
   Dart_ExitScope();
 }
 
@@ -586,7 +608,7 @@ void getValueListItems(Dart_NativeArguments arguments) {
   Dart_Handle list = HandleError(Dart_NewList(len));
   for (unsigned index = 0; index < len; ++index) {
     string item = listItems.at(index);
-    HandleError(Dart_ListSetAt(list, index, HandleError(Dart_NewStringFromCString(item.c_str()))));
+    HandleError(Dart_ListSetAt(list, index, StringToHandle(item)));
   }
 
   Dart_SetReturnValue(arguments, list);
@@ -601,7 +623,7 @@ void getValueListSelection(Dart_NativeArguments arguments) {
   string stringValue;
   Manager::Get()->GetValueListSelection(*vid, &stringValue);
   delete vid;
-  Dart_SetReturnValue(arguments, HandleError(Dart_NewStringFromCString(stringValue.c_str())));
+  Dart_SetReturnValue(arguments, StringToHandle(stringValue));
   Dart_ExitScope();
 }
 
@@ -672,6 +694,8 @@ FunctionLookup function_list[] = {
   {"getValueAsInt", getValueAsInt},
   {"getValueAsShort", getValueAsShort},
   {"getValueAsString", getValueAsString},
+  {"getValueGenre", getValueGenre},
+  {"getValueLabel", getValueLabel},
   {"getValueListItems", getValueListItems},
   {"getValueListSelection", getValueListSelection},
   {"getValueListSelectionIndex", getValueListSelectionIndex},
