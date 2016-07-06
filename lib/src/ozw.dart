@@ -41,10 +41,16 @@ class OZW extends ZWave {
   /// [configPath] is the path to the configuration directory
   /// containing the manufacturer_specific.xml file.
   /// On Raspberry Pi this is "/usr/local/etc/openzwave/"
-  void initialize(String configPath, Level logLevel) {
+  ///
+  /// The [userPath] specifies the directory in which the Z-Wave network
+  /// configuration file is written (see [writeConfig]) and other local
+  /// configuration information.
+  void initialize(
+      String configPath, String userPath, Level logLevel, bool logToConsole) {
     _notificationPort = new ReceivePort();
     _notificationSubscription = _notificationPort.listen(_processNotification);
-    _initialize(configPath, _notificationPort.sendPort, logLevel?.value);
+    _initialize(configPath, userPath, _notificationPort.sendPort,
+        logLevel?.value, logToConsole);
   }
 
   @override
@@ -76,6 +82,13 @@ class OZW extends ZWave {
     _notificationPort?.close();
     _notificationPort = null;
     _destroy();
+  }
+
+  @override
+  void writeConfig() {
+    for (int networkId in _networkDeviceMap.keys) {
+      _writeConfig(networkId);
+    }
   }
 
   // ===== Internal =======================================================
@@ -155,6 +168,9 @@ class OZW extends ZWave {
               case ValueType.Byte:
                 value = new _OZWByteValue(device, valueId);
                 break;
+              case ValueType.Decimal:
+                value = new _OZWDoubleValue(device, valueId);
+                break;
               case ValueType.Int:
                 value = new _OZWIntValue(device, valueId);
                 break;
@@ -178,7 +194,18 @@ class OZW extends ZWave {
 
       case NotificationType.ValueChanged:
       case NotificationType.ValueRefreshed:
-        print('>>> ${NotificationType.name(notificationIndex)}: $message');
+        Map<int, _OZWDevice> network = _networkDeviceMap[networkId];
+        if (network != null) {
+          _OZWDevice device = network[nodeId];
+          if (device != null) {
+            int valueId = message[3];
+            _OZWValue value = device.values.firstWhere((v) => v.id == valueId);
+            if (value is _OZWValue) {
+              value._changeController?.add(value.current);
+              return;
+            }
+          }
+        }
         return;
 
       case NotificationType.ValueRemoved:
@@ -193,7 +220,6 @@ class OZW extends ZWave {
         return;
 
       default:
-        print('>>> ${NotificationType.name(notificationIndex)}: $message');
         return;
     }
   }
@@ -212,9 +238,17 @@ class OZW extends ZWave {
   /// containing the manufacturer_specific.xml file.
   /// On Raspberry Pi this is "/usr/local/etc/openzwave/"
   ///
+  /// The [userPath] specifies the directory in which the Z-Wave network
+  /// configuration file is written (see [writeConfig]) and other local
+  /// configuration information.
+  ///
   /// [notificationPort] is the isolate port used by the native library
-  void _initialize(String configPath, SendPort notificationPort, int logLevel)
-      native "initialize";
+  void _initialize(
+      String configPath,
+      String userPath,
+      SendPort notificationPort,
+      int logLevel,
+      bool logToConsole) native "initialize";
 
   _destroy() native "destroy";
 
@@ -223,28 +257,42 @@ class OZW extends ZWave {
   _getNodeSpecific(int networkId, int nodeId) native "getNodeSpecific";
   _getNodeType(int networkId, int nodeId) native "getNodeType";
 
-  _getNodeManufacturerId(int networkId, int nodeId) native "getNodeManufacturerId";
-  _getNodeManufacturerName(int networkId, int nodeId) native "getNodeManufacturerName";
+  _getNodeManufacturerId(int networkId, int nodeId)
+      native "getNodeManufacturerId";
+  _getNodeManufacturerName(int networkId, int nodeId)
+      native "getNodeManufacturerName";
   _getNodeProductId(int networkId, int nodeId) native "getNodeProductId";
   _getNodeProductName(int networkId, int nodeId) native "getNodeProductName";
   _getNodeProductType(int networkId, int nodeId) native "getNodeProductType";
 
   _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
-  _getValueAsByte(int networkId, int id) native "getValueAsByte";
-  _getValueAsInt(int networkId, int id) native "getValueAsInt";
-  _getValueAsShort(int networkId, int id) native "getValueAsShort";
-  _getValueAsString(int networkId, int id) native "getValueAsString";
+  _getValueAsByte(int networkId, int valueId) native "getValueAsByte";
+  _getValueAsFloat(int networkId, int id) native "getValueAsFloat";
+  _getValueAsInt(int networkId, int valueId) native "getValueAsInt";
+  _getValueAsShort(int networkId, int valueId) native "getValueAsShort";
+  _getValueAsString(int networkId, int valueId) native "getValueAsString";
 
-  _getValueListItems(int networkId, int id) native "getValueListItems";
-  _getValueListSelection(int networkId, int id) native "getValueListSelection";
-  _getValueListSelectionIndex(int networkId, int id)
+  _getValueListItems(int networkId, int valueId) native "getValueListItems";
+  _getValueListSelection(int networkId, int valueId)
+      native "getValueListSelection";
+  _getValueListSelectionIndex(int networkId, int valueId)
       native "getValueListSelectionIndex";
 
-  _getValueMin(int networkId, int id) native "getValueMin";
-  _getValueMax(int networkId, int id) native "getValueMax";
+  _getValueMin(int networkId, int valueId) native "getValueMin";
+  _getValueMax(int networkId, int valueId) native "getValueMax";
 
-  _getValueGenre(int networkId, int id) native "getValueGenre";
-  _getValueLabel(int networkId, int id) native "getValueLabel";
+  _getValueGenre(int networkId, int valueId) native "getValueGenre";
+  _getValueLabel(int networkId, int valueId) native "getValueLabel";
+
+  _isValueReadOnly(int networkId, int id) native "isValueReadOnly";
+  _isValueWriteOnly(int networkId, int id) native "isValueWriteOnly";
+
+  _setBoolValue(int networkId, int valueId, bool newValue)
+      native "setBoolValue";
+  _setListSelectionValue(int networkId, int id, String newValue)
+      native "setListSelectionValue";
+
+  _writeConfig(int networkId) native "writeConfig";
 }
 
 class _OZWDevice extends Device {
@@ -285,40 +333,61 @@ class _OZWDevice extends Device {
   List<Value> get values => new List.from(_valueMap.values);
 }
 
-class _OZWValue implements Value {
+class _OZWValue<T> implements Value<T> {
   final _OZWDevice device;
   final int id;
+  StreamController<T> _changeController;
+  Stream<T> _changeStream;
 
   _OZWValue(this.device, this.id);
-
-  @override
-  get current => null;
 
   @override
   int get genre => device.zwave._getValueGenre(device.networkId, id);
 
   @override
+  bool get readOnly => device.zwave._isValueReadOnly(device.networkId, id);
+
+  @override
+  bool get writeOnly => device.zwave._isValueWriteOnly(device.networkId, id);
+
+  @override
   String get label => device.zwave._getValueLabel(device.networkId, id);
 
   @override
-  String toString() => 'Value($id)';
+  T get current => null;
+
+  @override
+  void set current(T newValue) => throw 'unsupported';
+
+  @override
+  Stream<T> get onChange {
+    if (_changeController == null) {
+      _changeController = new StreamController<T>();
+      _changeStream = _changeController.stream.asBroadcastStream();
+    }
+    return _changeStream;
+  }
 }
 
-class _OZWBoolValue extends _OZWValue implements BoolValue {
+class _OZWBoolValue extends _OZWValue<bool> implements BoolValue {
   _OZWBoolValue(_OZWDevice device, int id) : super(device, id);
 
   @override
   bool get current => device.zwave._getValueAsBool(device.networkId, id);
 
   @override
-  String toString() => 'BoolValue($id)';
+  void set current(bool newValue) =>
+      device.zwave._setBoolValue(device.networkId, id, newValue);
+
+  @override
+  String toString() => '$BoolValue($id)';
 }
 
 class _OZWButtonValue extends _OZWValue implements ButtonValue {
   _OZWButtonValue(_OZWDevice device, int id) : super(device, id);
 
   @override
-  String toString() => 'ButtonValue($id)';
+  String toString() => '$ButtonValue($id)';
 }
 
 class _OZWByteValue extends _OZWIntValue {
@@ -326,12 +395,19 @@ class _OZWByteValue extends _OZWIntValue {
 
   @override
   int get current => device.zwave._getValueAsByte(device.networkId, id);
-
-  @override
-  String toString() => 'ByteValue($id)';
 }
 
-class _OZWIntValue extends _OZWValue implements IntValue {
+class _OZWDoubleValue extends _OZWValue<double> implements DoubleValue {
+  _OZWDoubleValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  double get current => device.zwave._getValueAsFloat(device.networkId, id);
+
+  @override
+  String toString() => '$DoubleValue($id)';
+}
+
+class _OZWIntValue extends _OZWValue<int> implements IntValue {
   _OZWIntValue(_OZWDevice device, int id) : super(device, id);
 
   @override
@@ -344,15 +420,20 @@ class _OZWIntValue extends _OZWValue implements IntValue {
   int get min => device.zwave._getValueMax(device.networkId, id);
 
   @override
-  String toString() => 'IntValue($id)';
+  String toString() => '$IntValue($id)';
 }
 
-class _OZWListSelectionValue extends _OZWValue implements ListSelectionValue {
+class _OZWListSelectionValue extends _OZWValue<String>
+    implements ListSelectionValue {
   _OZWListSelectionValue(_OZWDevice device, int id) : super(device, id);
 
   @override
   String get current =>
       device.zwave._getValueListSelection(device.networkId, id);
+
+  @override
+  void set current(String newValue) =>
+      device.zwave._setListSelectionValue(device.networkId, id, newValue);
 
   @override
   int get currentIndex =>
@@ -363,7 +444,7 @@ class _OZWListSelectionValue extends _OZWValue implements ListSelectionValue {
       device.zwave._getValueListItems(device.networkId, id);
 
   @override
-  String toString() => 'ListSelectionValue($id)';
+  String toString() => '$ListSelectionValue($id)';
 }
 
 class _OZWShortValue extends _OZWIntValue {
@@ -371,17 +452,14 @@ class _OZWShortValue extends _OZWIntValue {
 
   @override
   int get current => device.zwave._getValueAsShort(device.networkId, id);
-
-  @override
-  String toString() => 'ShortValue($id)';
 }
 
-class _OZWStringValue extends _OZWValue implements StringValue {
+class _OZWStringValue extends _OZWValue<String> implements StringValue {
   _OZWStringValue(_OZWDevice device, int id) : super(device, id);
 
   @override
   String get current => device.zwave._getValueAsString(device.networkId, id);
 
   @override
-  String toString() => 'StringValue($id)';
+  String toString() => '$StringValue($id)';
 }

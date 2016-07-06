@@ -35,4 +35,9 @@ class MockZWave implements ZWave {
   Future dispose() async {
     // TODO: implement dispose
   }
+
+  @override
+  void writeConfig() {
+    // TODO: implement writeConfig
+  }
 }

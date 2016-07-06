@@ -20,6 +20,7 @@ See the **zwave library** for more about how to interact with Z-Wave devices.
 
 * The [Open Z-Wave library](https://github.com/OpenZWave/open-zwave/) used by
   this Dart library to communicate with the Z-Wave controller.
+  Tested with Open Z-Wave Library 1.4.256
 
 ## Setup
 

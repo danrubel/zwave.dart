@@ -1,18 +1,11 @@
 /// This Dart library uses the
 /// [Open Z-Wave library](https://github.com/OpenZWave/open-zwave/)
 /// to communicate with a compatible Z-Wave Controller
-/// and interact with Z-Wave devices.
+/// and interact with Z-Wave devices (also known as Z-Wave nodes).
 ///
-/// # Using
-/// Start by initializing the Z-Wave manager singleton:
-///
-///     ZWave zwave = await ZWave.init(configPath);
-///
-/// When you first initialize the Z-Wave manager, it probes the Z-Wave network
-/// to discover all connected devices. On shutdown (when [dispose] is called),
-/// this information is written to the Z-Wave network configuration to a file.
-/// On subsequent starts, the network configuration is loaded from this file
-/// rather than probing the network.
+/// # Usage
+/// * initialize the [ZWave] manager singleton
+/// * access the connected [Device]s via the Z-Wave manager
 library zwave;
 
 import 'dart:async';
@@ -23,23 +16,62 @@ import 'package:logging/logging.dart';
 
 import 'src/ozw.dart' deferred as ozw;
 
-part 'zwave_g.dart';
+part 'src/zwave_g.dart';
 
 /// The [ZWave] class interactes with the Z-Wave controller
-/// and provids access to any paired Z-Wave devices.
+/// and provids access to any associated Z-Wave [Device]s.
+///
+/// # Startup
+/// Start by initializing the Z-Wave manager singleton via [init].
+///
+///     ZWave zwave = await ZWave.init(configPath);
+///
+/// Next, associate one or more controllers and wait for the Z-Wave manager
+/// to complete the [Device] discovery process.
+///
+///     await zwave.connect('/dev/ttyACM0');
+///     await zwave.update();
+///     zwave.writeConfig(); // optional
+///
+/// When you first associate a controller, it probes the Z-Wave network
+/// to discover all connected [Device]s. On shutdown (when [dispose] is called),
+/// this information is written to the Z-Wave network configuration to a file.
+/// You can also explicitly trigger this information to be written
+/// by calling the [writeConfig] method.
+/// On subsequent starts, the network configuration is loaded from this file
+/// rather than probing the network.
+///
+/// # Device access
+/// Once startup is complete, use [devices] to obtain a list of connected
+/// [Device]s.
 abstract class ZWave {
   /// Return the Z-Wave manager singleton.
   /// This should be called exactly once.
   ///
   /// [configPath] is the path to the configuration directory
-  /// containing the manufacturer_specific.xml file.
-  /// On Raspberry Pi this is "/usr/local/etc/openzwave/"
-  static Future<ZWave> init(String configPath, {Level logLevel}) async {
+  /// containing the `manufacturer_specific.xml` file.
+  /// On Raspberry Pi this is `/usr/local/etc/openzwave/`
+  ///
+  /// The [userPath] specifies the directory in which the Z-Wave network
+  /// configuration file is written (see [writeConfig]) and other local
+  /// configuration information.
+  ///
+  /// By default, the Open Z-Wave library prints logging information to the
+  /// console. To suppress this, set [logToConsole] to false.
+  static Future<ZWave> init(String configPath,
+      {String userPath, Level logLevel, bool logToConsole}) async {
     await ozw.loadLibrary();
-    return new ozw.OZW()..initialize(configPath, logLevel);
+    return new ozw.OZW()
+      ..initialize(configPath, userPath, logLevel, logToConsole);
   }
 
-  /// Return a list of the known devices at this point in time.
+  /// Return a list of the known [Device]s
+  /// including the associated Z-Wave controller(s).
+  ///
+  /// If you only have one associated Z-Wave controller,
+  /// then you can obtain the desired [Device] via
+  ///
+  ///     Device device = zwave.devices.firstWhere((d) => d.nodeId == someId);
   List<Device> get devices;
 
   /// Return the version of the Open Z-Wave library
@@ -67,15 +99,51 @@ abstract class ZWave {
   Future allUpdated();
 
   /// Disconnect from the Z-Wave controller, cleanup any resources, and write
-  /// the Z-Wave network configuration to a file in the current directory.
-  /// The filename consists of the 8 digit hexadecimal version of the
-  /// controller's Home ID, prefixed with the string 'zwcfg_'.
+  /// the Z-Wave network configuration to a file in the user data directory
+  /// (see [writeConfig]).
   /// Returns a [Future] that completes when the process is complete.
   Future dispose();
+
+  /// Write the Z-Wave network configuration to a file in the user data directory.
+  /// Normally this is not needed as this file is automatically written
+  /// as part of the [dispose] process, but it is useful to call this method
+  /// after a new device has been added.
+  ///
+  /// The Z-Wave network configuration filename consists of the 8 digit
+  /// hexadecimal version of the controller's Home ID,
+  /// prefixed with the string 'zwcfg_'.
+  /// The directory into which this file is written can be specified
+  /// via `userPath:` when calling [init].
+  void writeConfig();
 }
 
+/// Each Z-Wave node or device has a [networkId] and a [nodeId].
+/// If you only have one associated Z-Wave controller (see [ZWave] startup)
+/// then you can ignore the [networkId] and just use the [nodeId] to uniquely
+/// identify each device.
+///
+/// Once the [ZWave] manager has been [started](zwave/ZWave-class.html),
+/// you can list connected devices
+/// via [zwave.devices](zwave/ZWave/devices.html).
+///
+/// Each device has one or more [Value]s associated with it representing the
+/// state of the device and ranging from higher level user values
+/// to lower level system values. The [values] method returns all [Value]s
+/// associated with the device whereas the [userValues] only returns the
+/// higher level values deemed more interesting to the user.
 abstract class Device {
+  /// The id of the network or Z-Wave controller managing this device.
+  /// Each Z-Wave controller has a unique network id.
   final int networkId;
+
+  /// The id of the device on it's network.
+  /// This is only unique with respect to other devices on the same network
+  /// or associated with the same Z-Wave controllers.
+  ///
+  /// Typically (always?) the controller has node id 1 and the controller
+  /// assigns a node id to each device as it is paired with that controller.
+  /// The device keeps that same node id through shutdown and startup
+  /// until it is removed or unpaired from that controller.
   final int nodeId;
 
   /// Get the basic type of a node.
@@ -128,47 +196,60 @@ abstract class Device {
 }
 
 /// Abstract representation of a specific value.
-abstract class Value {
+abstract class Value<T> {
+  /// The device containing this value.
   Device get device;
-  int get id;
-  String get label;
-  dynamic get current;
 
-  get genre => null;
+  /// The unique identifier of this value during this session.
+  /// This may not be unique after a restart.
+  int get id;
+
+  /// The [ValueGenre] of this value.
+  int get genre;
+
+  bool get readOnly;
+  bool get writeOnly;
+  String get label;
+
+  /// The current state of this value.
+  /// Only very occasionally a value is [writeOnly]
+  /// in which case this method will throw an exception.
+  T get current;
+
+  /// Set the current state of this value (if not [readOnly]).
+  /// Due to the possibility of a device being asleep, the operation is assumed
+  /// to suceed, the local value is updated directly, and an [onChange]
+  /// notification sent. If the Z-Wave message failed to get through then
+  /// the value will be reverted to its original state and another [onChange]
+  /// notification will be sent.
+  void set current(T newValue);
+
+  /// A stream of state changes.
+  Stream<T> get onChange;
 }
 
 /// Abstract representation of a specific [bool] value.
 /// See [ValueType.BoolType]
-abstract class BoolValue extends Value {
-  bool get current;
-}
+abstract class BoolValue extends Value<bool> {}
 
 /// Abstract representation of a specific [int] value.
 /// See [ValueType.ByteType], [ValueType.ShortType], and [ValueType.IntType].
-abstract class IntValue extends Value {
-  int get current;
+abstract class IntValue extends Value<int> {
   int get min;
   int get max;
 }
 
 /// Abstract representation of a specific [double] value.
 /// See [ValueType.DecimalType].
-abstract class DoubleValue extends Value {
-  double get current;
-}
+abstract class DoubleValue extends Value<double> {}
 
 /// Abstract representation of a specific [String] value.
 /// See [ValueType.StringType].
-abstract class StringValue extends Value {
-  String get current;
-}
+abstract class StringValue extends Value<String> {}
 
 /// Abstract representation of a specific list selection value.
 /// See [ValueType.ListType].
-abstract class ListSelectionValue extends Value {
-  /// Return the currently selected list element.
-  String get current;
-
+abstract class ListSelectionValue extends Value<String> {
   /// Return the index associated with the currently selected list element.
   /// `v.currentIndex != v.list.indexOf(v.current)`
   int get currentIndex => null;
@@ -184,7 +265,7 @@ abstract class ScheduleValue extends Value {}
 /// Abstract representation of a specific button value.
 /// See [ValueType.ButtonType].
 abstract class ButtonValue extends Value {
-  /// Alwyas return `null` because a ButtonValue can only be set.
+  /// Always return `null` because a ButtonValue can only be set.
   dynamic get current => null;
 }
 

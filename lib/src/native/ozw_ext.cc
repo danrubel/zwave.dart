@@ -51,6 +51,12 @@ Dart_Handle HandleError(Dart_Handle handle) {
   return handle;
 }
 
+bool HandleToBool(Dart_Handle handle) {
+  bool value;
+  HandleError(Dart_BooleanValue(HandleError(handle), &value));
+  return value;
+}
+
 int64_t HandleToInt(Dart_Handle handle) {
   int64_t value;
   HandleError(Dart_IntegerToInt64(HandleError(handle), &value));
@@ -325,12 +331,21 @@ void initialize(Dart_NativeArguments arguments) {
   if (notificationPort != -1) {
     HandleError(Dart_NewApiError("already initialized"));
   }
+
   string configPath = HandleToString(Dart_GetNativeArgument(arguments, 1));
-  Dart_Handle port_obj = HandleError(Dart_GetNativeArgument(arguments, 2));
+
+  string userPath;
+  if (Dart_IsNull(Dart_GetNativeArgument(arguments, 2))) {
+    userPath = "";
+  } else {
+    userPath = HandleToString(Dart_GetNativeArgument(arguments, 2));
+  }
+
+  Dart_Handle port_obj = HandleError(Dart_GetNativeArgument(arguments, 3));
   HandleError(Dart_SendPortGetId(port_obj, &notificationPort));
 
   LogLevel logLevel = LogLevel_Alert;
-  Dart_Handle logLevel_obj = HandleError(Dart_GetNativeArgument(arguments, 3));
+  Dart_Handle logLevel_obj = HandleError(Dart_GetNativeArgument(arguments, 4));
   if (!Dart_IsNull(logLevel_obj)) {
     int64_t logLevel_int = HandleToInt(logLevel_obj);
     if      (logLevel_int >= 2000) logLevel = LogLevel_None; // OFF
@@ -347,17 +362,23 @@ void initialize(Dart_NativeArguments arguments) {
     else                           logLevel = LogLevel_Internal; // ALL
   }
 
+  bool logToConsole = true;
+  if (!Dart_IsNull(Dart_GetNativeArgument(arguments, 5))) {
+    HandleError(Dart_BooleanValue(Dart_GetNativeArgument(arguments, 5), &logToConsole));
+  }
+
   // Create the OpenZWave Manager.
   // The first argument is the path to the config files (where the manufacturer_specific.xml file is located
   // The second argument is the path for saved Z-Wave network state and the log file.  If you leave it NULL
   // the log file will appear in the program's working directory.
-  Options::Create(configPath, "", "" );
+  Options::Create(configPath, userPath, "" );
+  Options::Get()->AddOptionBool( "ConsoleOutput", logToConsole );
   Options::Get()->AddOptionInt( "SaveLogLevel", logLevel );
   Options::Get()->AddOptionInt( "QueueLogLevel", LogLevel_Debug );
   Options::Get()->AddOptionInt( "DumpTrigger", LogLevel_Error );
   Options::Get()->AddOptionInt( "PollInterval", 500 );
   Options::Get()->AddOptionBool( "IntervalBetweenPolls", true );
-  Options::Get()->AddOptionBool("ValidateValueChanges", true);
+  Options::Get()->AddOptionBool( "ValidateValueChanges", true );
   Options::Get()->Lock();
 
   Manager::Create();
@@ -524,6 +545,17 @@ void getValueAsBool(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Sets the state of a bool.
+// _setBoolValue(int networkId, int valueId, bool newValue) native "setBoolValue";
+void setBoolValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  bool boolValue = HandleToBool(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValue(*vid, boolValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
 // Gets a value as a byte.
 // _getValueAsByte(int networkId, int valueId) native "getValueAsByte";
 void getValueAsByte(Dart_NativeArguments arguments) {
@@ -533,6 +565,18 @@ void getValueAsByte(Dart_NativeArguments arguments) {
   Manager::Get()->GetValueAsByte(*vid, &byteValue);
   delete vid;
   Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(byteValue)));
+  Dart_ExitScope();
+}
+
+// Gets a value as a float.
+// _getValueAsFloat(int networkId, int id) native "getValueAsFloat";
+void getValueAsFloat(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  float floatValue;
+  Manager::Get()->GetValueAsFloat(*vid, &floatValue);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewDouble(floatValue)));
   Dart_ExitScope();
 }
 
@@ -639,6 +683,17 @@ void getValueListSelectionIndex(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Sets the selected item in a list.
+// _setListSelectionValue(int networkId, int id, String newValue) native "setListSelectionValue";
+void setListSelectionValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string stringValue = HandleToString(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValueListSelection(*vid, stringValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
 // Get the minimum for an integer value.
 // _getValueMin(int networkId, int id) native "getValueMin";
 void getValueMin(Dart_NativeArguments arguments) {
@@ -661,12 +716,43 @@ void getValueMax(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Test whether the value is read-only.
+// _isValueReadOnly(int networkId, int id) native "isValueReadOnly";
+void isValueReadOnly(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  bool readOnly = Manager::Get()->IsValueReadOnly(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(readOnly)));
+  Dart_ExitScope();
+}
+
+// Test whether the value is write-only.
+// _isValueWriteOnly(int networkId, int id) native "isValueWriteOnly";
+void isValueWriteOnly(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  bool writeOnly = Manager::Get()->IsValueWriteOnly(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(writeOnly)));
+  Dart_ExitScope();
+}
+
 // Return the OpenZWave Version
 // String version() native "version";
 void version(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   string version = Manager::getVersionAsString();
   Dart_SetReturnValue(arguments, StringToHandle(version));
+  Dart_ExitScope();
+}
+
+// Saves the configuration of a PC Controller's Z-Wave network to the application's user data folder.
+// _writeConfig(int networkId) native "writeConfig";
+void writeConfig(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  Manager::Get()->WriteConfig(homeId);
   Dart_ExitScope();
 }
 
@@ -691,6 +777,7 @@ FunctionLookup function_list[] = {
   {"getNodeProductType", getNodeProductType},
   {"getValueAsBool", getValueAsBool},
   {"getValueAsByte", getValueAsByte},
+  {"getValueAsFloat", getValueAsFloat},
   {"getValueAsInt", getValueAsInt},
   {"getValueAsShort", getValueAsShort},
   {"getValueAsString", getValueAsString},
@@ -702,7 +789,12 @@ FunctionLookup function_list[] = {
   {"getValueMin", getValueMin},
   {"getValueMax", getValueMax},
   {"initialize", initialize},
+  {"isValueReadOnly", isValueReadOnly},
+  {"isValueWriteOnly", isValueWriteOnly},
+  {"setBoolValue", setBoolValue},
+  {"setListSelectionValue", setListSelectionValue},
   {"version", version},
+  {"writeConfig", writeConfig},
   {NULL, NULL}
 };
 

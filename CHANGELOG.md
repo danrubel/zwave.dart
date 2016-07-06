@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+* add writeConfig to save network configuration
+* add setters to bool and list values
+* add onChange notification stream
+* add value readOnly and writeOnly accessors
+* parameterize the Value class and its methods
+* add userPath for specifying user data directory
+* add support for DoubleValue
+
 ## 0.1.4
 * add value label accessor
 * add value genre and device userValues accessors
