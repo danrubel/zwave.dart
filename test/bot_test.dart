@@ -19,21 +19,18 @@ main(List<String> args) async {
 
   int argIndex = 0;
   while (argIndex < args.length) {
-    // optionally dispaly all values associated with each device
-    // rather than just the interesting user level values
     if (args[argIndex] == '--allValues') {
+      // optionally dispaly all values associated with each device
+      // rather than just the interesting user level values
       allValues = true;
-
-    // test a boolean value by toggling that value
-    // --testBool=<nodeId>/<value-label>
     } else if (args[argIndex].startsWith('--testBool=')) {
+      // test a boolean value by toggling that value
+      // --testBool=<nodeId>/<value-label>
       boolTest = parseNodeValue(args[argIndex]);
-
-    // test a selection value by toggling that value
-    // --testSelection=<nodeId>/<value-label>/<selection>
     } else if (args[argIndex].startsWith('--testSelection=')) {
+      // test a selection value by toggling that value
+      // --testSelection=<nodeId>/<value-label>/<selection>
       selectionTest = parseNodeValue(args[argIndex]);
-
     } else if (args[argIndex].startsWith('--timeout=')) {
       timeout = new Timeout(
           new Duration(minutes: int.parse(args[argIndex].substring(10))));
@@ -52,6 +49,7 @@ main(List<String> args) async {
     String version = zwave.version;
     print('  Open Z-Wave Library $version');
     expect(version, isNotEmpty);
+
     print('connecting...');
     await zwave.connect(controllerPort);
     print('updating...');
@@ -61,34 +59,18 @@ main(List<String> args) async {
       await zwave.allUpdated();
     }
     zwave.writeConfig(); // optional - see docs
-    for (Device device in zwave.devices) {
-      print('  $device - ${device.manufacturerName} ${device.productName}');
-      for (Value value in (allValues ? device.values : device.userValues)) {
-        var buf = new StringBuffer('      ${value.label} ($value)');
-        if (value.readOnly) buf.write(' (readOnly)');
-        if (value.writeOnly) buf.write(' (writeOnly)');
-        while (buf.length < 65) buf.write(' ');
-        buf.write(' = ${value.current}');
-        if (value is ListSelectionValue) {
-          buf.write(' - ${value.currentIndex}');
-        }
-        print(buf);
 
-        if (value is IntValue) {
-          print('        min ${value.min}, max ${value.max}');
+    print('---- summary');
+    print(zwave.summary(allValues: allValues));
 
-        } else if (value is ListSelectionValue) {
-          var buf = new StringBuffer('        ');
-          for (String item in value.list) {
-            buf.write('$item, ');
-          }
-          print(buf);
-        }
-      }
-    }
+    print('---- exception messages');
+    testException(() => zwave.device(999)); // impossible node id
+    testException(() => zwave.device(1, networkId: 0x12345678)); // unknown net
+    testException(() => zwave.device(1).value('unknown')); // unknown value
+
     if (boolTest != null) {
-      Device device = zwave.devices.firstWhere((d) => d.nodeId == boolTest[0]);
-      BoolValue value = device.values.firstWhere((v) => v.label == boolTest[1]);
+      Device device = zwave.device(boolTest[0]);
+      BoolValue value = device.value(boolTest[1]);
       print('bool test $device $value ...');
 
       bool original = value.current;
@@ -105,8 +87,8 @@ main(List<String> args) async {
       await new Future.delayed(new Duration(milliseconds: 500));
     }
     if (selectionTest != null) {
-      Device device = zwave.devices.firstWhere((d) => d.nodeId == selectionTest[0]);
-      ListSelectionValue value = device.values.firstWhere((v) => v.label == selectionTest[1]);
+      Device device = zwave.device(selectionTest[0]);
+      ListSelectionValue value = device.value(selectionTest[1]);
       print('selection test $device $value ...');
 
       String original = value.current;
@@ -135,4 +117,14 @@ List<dynamic> parseNodeValue(String arg) {
   List<dynamic> nodeValue = arg.split('=')[1].split(',');
   nodeValue[0] = int.parse(nodeValue[0]);
   return nodeValue;
+}
+
+void testException(Function testFunct) {
+  try {
+    testFunct();
+  } catch (e) {
+    print(e);
+    return;
+  }
+  throw 'expected exception';
 }

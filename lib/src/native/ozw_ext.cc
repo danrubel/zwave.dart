@@ -149,46 +149,17 @@ void OnNotification(Notification const* _notification, void* _context) {
   int64_t notificationType = _notification->GetType();
   Dart_CObject message;
 
+  Dart_CObject notificationTypeValue = {
+    Dart_CObject_kInt32, { .as_int32 = notificationType }
+  };
+  Dart_CObject homeId = {
+    Dart_CObject_kInt64, { .as_int64 = _notification->GetHomeId() }
+  };
+  Dart_CObject nodeId = {
+    Dart_CObject_kInt32, { .as_int32 = _notification->GetNodeId() }
+  };
+
   switch( notificationType ) {
-  //
-  //   case Notification::Type_Group:
-  //   {
-  //     // One of the node's association groups has changed
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       nodeInfo = nodeInfo;    // placeholder for real action
-  //     }
-  //     break;
-  //   }
-  //   case Notification::Type_NodeRemoved:
-  //   {
-  //     // Remove the node from our list
-  //     uint32 const homeId = _notification->GetHomeId();
-  //     uint8 const nodeId = _notification->GetNodeId();
-  //     for( list<NodeInfo*>::iterator it = g_nodes.begin(); it != g_nodes.end(); ++it )
-  //     {
-  //       NodeInfo* nodeInfo = *it;
-  //       if( ( nodeInfo->m_homeId == homeId ) && ( nodeInfo->m_nodeId == nodeId ) )
-  //       {
-  //         g_nodes.erase( it );
-  //         delete nodeInfo;
-  //         break;
-  //       }
-  //     }
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_NodeEvent:
-  //   {
-  //     // We have received an event from the node, caused by a
-  //     // basic_set or hail message.
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       nodeInfo = nodeInfo;    // placeholder for real action
-  //     }
-  //     break;
-  //   }
-  //
   //   case Notification::Type_PollingDisabled:
   //   {
   //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
@@ -230,21 +201,95 @@ void OnNotification(Notification const* _notification, void* _context) {
   //
   //   case Notification::Type_DriverReset:
   //   case Notification::Type_Notification:
-  //   case Notification::Type_NodeNaming:
-  //   case Notification::Type_NodeProtocolInfo:
   //   case Notification::Type_NodeQueriesComplete:
 
+    case Notification::Type_CreateButton:
+    case Notification::Type_ButtonOn:
+    case Notification::Type_ButtonOff:
+    case Notification::Type_DeleteButton: {
+      uint32 bid = _notification->GetButtonId();
+      Dart_CObject buttonId = {
+        Dart_CObject_kInt32, { .as_int32 = bid }
+      };
+      Dart_CObject* messageParts[4] = {
+        &notificationTypeValue,
+        &homeId,
+        &nodeId,
+        &buttonId,
+      };
+      message.type = Dart_CObject_kArray;
+      message.value.as_array.length = 4;
+      message.value.as_array.values = messageParts;
+      break;
+    }
+
+    case Notification::Type_SceneEvent: {
+      uint8 sid = _notification->GetSceneId();
+      Dart_CObject sceneId = {
+        Dart_CObject_kInt32, { .as_int32 = sid }
+      };
+      Dart_CObject* messageParts[4] = {
+        &notificationTypeValue,
+        &homeId,
+        &nodeId,
+        &sceneId,
+      };
+      message.type = Dart_CObject_kArray;
+      message.value.as_array.length = 4;
+      message.value.as_array.values = messageParts;
+      break;
+    }
+
+    case Notification::Type_Group: {
+      uint8 gIndex = _notification->GetGroupIdx();
+      Dart_CObject groupIndex = {
+        Dart_CObject_kInt32, { .as_int32 = gIndex }
+      };
+      Dart_CObject* messageParts[4] = {
+        &notificationTypeValue,
+        &homeId,
+        &nodeId,
+        &groupIndex,
+      };
+      message.type = Dart_CObject_kArray;
+      message.value.as_array.length = 4;
+      message.value.as_array.values = messageParts;
+      break;
+    }
+
+    case Notification::Type_Notification: {
+      uint8 note = _notification->GetNotification();
+      Dart_CObject notification = {
+        Dart_CObject_kInt32, { .as_int32 = note }
+      };
+      Dart_CObject* messageParts[4] = {
+        &notificationTypeValue,
+        &homeId,
+        &nodeId,
+        &notification,
+      };
+      message.type = Dart_CObject_kArray;
+      message.value.as_array.length = 4;
+      message.value.as_array.values = messageParts;
+      break;
+    }
+
+    case Notification::Type_DriverReady:
+    case Notification::Type_DriverFailed:
+    case Notification::Type_AwakeNodesQueried: // nodeId = 0xFF
+    case Notification::Type_AllNodesQueried: // nodeId = 0xFF
+    case Notification::Type_AllNodesQueriedSomeDead: // nodeId = 0xFF
+    case Notification::Type_NodeNew:
     case Notification::Type_NodeAdded:
-    case Notification::Type_NodeRemoved: {
-      Dart_CObject notificationTypeValue = {
-        Dart_CObject_kInt32, { .as_int32 = notificationType }
-      };
-      Dart_CObject homeId = {
-        Dart_CObject_kInt64, { .as_int64 = _notification->GetHomeId() }
-      };
-      Dart_CObject nodeId = {
-        Dart_CObject_kInt32, { .as_int32 = _notification->GetNodeId() }
-      };
+    case Notification::Type_NodeProtocolInfo:
+    case Notification::Type_NodeNaming:
+    case Notification::Type_NodeEvent:
+    case Notification::Type_NodeRemoved:
+    case Notification::Type_NodeReset:
+    case Notification::Type_EssentialNodeQueriesComplete:
+    case Notification::Type_NodeQueriesComplete:
+    case Notification::Type_PollingEnabled:
+    case Notification::Type_PollingDisabled: {
       Dart_CObject* messageParts[3] = {
         &notificationTypeValue,
         &homeId,
@@ -261,15 +306,6 @@ void OnNotification(Notification const* _notification, void* _context) {
     case Notification::Type_ValueRefreshed:
     case Notification::Type_ValueRemoved: {
       ValueID vid = _notification->GetValueID();
-      Dart_CObject notificationTypeValue = {
-        Dart_CObject_kInt32, { .as_int32 = notificationType }
-      };
-      Dart_CObject homeId = {
-        Dart_CObject_kInt64, { .as_int64 = _notification->GetHomeId() }
-      };
-      Dart_CObject nodeId = {
-        Dart_CObject_kInt32, { .as_int32 = _notification->GetNodeId() }
-      };
       Dart_CObject valueId = {
         Dart_CObject_kInt64, { .as_int64 = vid.GetId() }
       };
@@ -470,6 +506,28 @@ void getNodeType(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Get the user-editable name of a node.
+// _getNodeName(int networkId, int nodeId) native "getNodeName";
+void getNodeName(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string text = Manager::Get()->GetNodeName(homeId, nodeId);
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
+// Set the name of a node.
+// _setNodeName(int networkId, int nodeId, String newName) native "setNodeName";
+void setNodeName(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  string name = HandleToString(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetNodeName(homeId, nodeId, name);
+  Dart_ExitScope();
+}
+
 // Get the manufacturer ID of a device, a four digit hex code.
 // _getNodeManufacturerId(int networkId, int nodeId) native "getNodeManufacturerId";
 void getNodeManufacturerId(Dart_NativeArguments arguments) {
@@ -592,6 +650,17 @@ void getValueAsInt(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Sets the value of a 32-bit signed integer.
+// _setIntValue(int networkId, int valueId, int newValue) native "setIntValue";
+void setIntValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int32 intValue = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValue(*vid, intValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
 // Gets a value as a short.
 // _getValueAsShort(int networkId, int id) native "getValueAsShort";
 void getValueAsShort(Dart_NativeArguments arguments) {
@@ -635,6 +704,17 @@ void getValueLabel(Dart_NativeArguments arguments) {
   string label = Manager::Get()->GetValueLabel(*vid);
   delete vid;
   Dart_SetReturnValue(arguments, StringToHandle(label));
+  Dart_ExitScope();
+}
+
+// Sets the user-friendly label for the value.
+// _setValueLabel(int networkId, int valueId, String newLabel) native "setValueLabel";
+void setValueLabel(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string label = HandleToString(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValueLabel(*vid, label);
+  delete vid;
   Dart_ExitScope();
 }
 
@@ -738,6 +818,15 @@ void isValueWriteOnly(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+void refreshNodeInfo(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  bool success = Manager::Get()->RefreshNodeInfo(homeId, nodeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(success)));
+  Dart_ExitScope();
+}
+
 // Return the OpenZWave Version
 // String version() native "version";
 void version(Dart_NativeArguments arguments) {
@@ -770,6 +859,7 @@ FunctionLookup function_list[] = {
   {"getNodeGeneric", getNodeGeneric},
   {"getNodeSpecific", getNodeSpecific},
   {"getNodeType", getNodeType},
+  {"getNodeName", getNodeName},
   {"getNodeManufacturerId", getNodeManufacturerId},
   {"getNodeManufacturerName", getNodeManufacturerName},
   {"getNodeProductId", getNodeProductId},
@@ -791,8 +881,12 @@ FunctionLookup function_list[] = {
   {"initialize", initialize},
   {"isValueReadOnly", isValueReadOnly},
   {"isValueWriteOnly", isValueWriteOnly},
+  {"refreshNodeInfo", refreshNodeInfo},
   {"setBoolValue", setBoolValue},
+  {"setIntValue", setIntValue},
   {"setListSelectionValue", setListSelectionValue},
+  {"setNodeName", setNodeName},
+  {"setValueLabel", setValueLabel},
   {"version", version},
   {"writeConfig", writeConfig},
   {NULL, NULL}

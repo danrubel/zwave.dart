@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+* update generate to include comments in src/zwave_g.dart
+* new ZWave deviceSummary convenience method for listing device info
+* add device and value lookup convenience methods
+* add Device update method for updating all a device's information
+* add Device onNotification event stream
+* add support for setting int value
+* rename ZWave.deviceSummary() --> summary() and add Device.summary()
+* add Node.name and Device.label getters and setters
+
 ## 0.2.0
 * add writeConfig to save network configuration
 * add setters to bool and list values

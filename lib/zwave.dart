@@ -65,6 +65,13 @@ abstract class ZWave {
       ..initialize(configPath, userPath, logLevel, logToConsole);
   }
 
+  /// Return the specified device.
+  /// If there is only one Z-Wave controller
+  /// then only the [nodeId] of the device needs to be specified.
+  /// If there are two or more Z-Wave controllers
+  /// then both the [nodeId] and the [networkId] must be specified.
+  Device device(int nodeId, {int networkId});
+
   /// Return a list of the known [Device]s
   /// including the associated Z-Wave controller(s).
   ///
@@ -115,6 +122,15 @@ abstract class ZWave {
   /// The directory into which this file is written can be specified
   /// via `userPath:` when calling [init].
   void writeConfig();
+
+  /// Return a human readable summary of known devices and their values.
+  String summary({bool allValues: false}) {
+    var summary = new StringBuffer();
+    for (Device device in devices) {
+      summary.write(device.summary(allValues: allValues));
+    }
+    return summary.toString();
+  }
 }
 
 /// Each Z-Wave node or device has a [networkId] and a [nodeId].
@@ -146,6 +162,12 @@ abstract class Device {
   /// until it is removed or unpaired from that controller.
   final int nodeId;
 
+  /// Return the user editable name of the device.
+  String get name;
+
+  /// Set the name of the device.
+  void set name(String newName);
+
   /// Get the basic type of a node.
   int get nodeBasic;
 
@@ -173,6 +195,12 @@ abstract class Device {
   /// Return the manufacturer's product type, a four digit hex code.
   String get productType;
 
+  /// Return `true` if the device's manufacturer and product information
+  /// has not been received by the system, indicating that an [update] may
+  /// needed to obtain the device's configuration.
+  bool get isNotConfigured =>
+      manufacturerId == '0x0000' && productId == '0x0000';
+
   /// The last time a message was received from this device.
   DateTime lastMsgTime;
 
@@ -186,13 +214,93 @@ abstract class Device {
 
   int get hashCode => networkId * 256 + nodeId;
 
+  /// A stream of [Notification]s related to this device.
+  Stream<Notification> get onNotification;
+
+  /// Request all the device's data to be obtained from the Z-Wave network
+  /// in the same way as if it had just been added.
+  /// Return a future indicating whether or not the request was successful.
+  Future<bool> update();
+
+  /// Return the [Value] with the specified [label].
+  ///
+  /// If no value matches [test], the result of invoking the [orElse]
+  /// function is returned. If [orElse] is omitted or `null`, it defaults to
+  /// throwing an exception indicating no matching [Value] was found.
+  /// For example:
+  ///
+  ///     Value myValue = device.value('myNiceLabel', orElse: () {
+  ///       return device.value('defaultLabel')..label = 'myNiceLabel';
+  ///     });
+  ///
+  Value value(String label, {Value orElse()}) {
+    orElse ??= () {
+      var labels = values.map((v) => v.label).toList()..sort();
+      throw 'Expected label to be one of $labels';
+    };
+    return values.firstWhere((v) => v.label == label, orElse: orElse);
+  }
+
   /// Return a list of all values associated with the device.
   List<Value> get values;
 
   /// Return a list of values an ordinary user would be interested in.
   List<Value> get userValues => values.where((v) => v.genre == ValueGenre.User);
 
-  String toString() => 'Device($networkId, $nodeId)';
+  /// Return a human readable summary of the device and its values.
+  String summary({bool allValues: false}) {
+    var summary = new StringBuffer();
+    summary.write('${toString()} - ');
+    if (manufacturerName == '') {
+      summary.write('${manufacturerId} ');
+    } else {
+      summary.write('${manufacturerName} ');
+    }
+    if (productName == '') {
+      summary.writeln('${productId}');
+    } else {
+      summary.writeln('${productName}');
+    }
+    for (Value value in (allValues ? values : userValues)) {
+      int lineStart = summary.length;
+      summary.write('  ${value.label} ($value)');
+      if (value.readOnly) summary.write(' (readOnly)');
+      if (value.writeOnly) summary.write(' (writeOnly)');
+      while (summary.length < lineStart + 65) summary.write(' ');
+      summary.write(' = ${value.current}');
+      if (value is ListSelectionValue) {
+        summary.write(' - ${value.currentIndex}');
+      }
+      summary.writeln();
+
+      if (value is IntValue) {
+        summary.writeln('    min ${value.min}, max ${value.max}');
+      } else if (value is ListSelectionValue) {
+        summary.write('    ');
+        for (String item in value.list) {
+          summary.write('$item, ');
+        }
+        summary.writeln();
+      }
+    }
+    return summary.toString();
+  }
+
+  String toString() => 'Device(0x${networkId.toRadixString(16)}, $nodeId)';
+}
+
+/// A notification received from the [ZWave] manager.
+class Notification {
+  final Device device;
+  final int notificationIndex;
+  final int sceneId;
+  final List rawMessage;
+
+  Notification(this.device, this.notificationIndex, this.rawMessage,
+      {this.sceneId});
+
+  String toString() =>
+      '$device ${NotificationType.name(notificationIndex)} $rawMessage)';
 }
 
 /// Abstract representation of a specific value.
@@ -209,7 +317,12 @@ abstract class Value<T> {
 
   bool get readOnly;
   bool get writeOnly;
+
+  /// Returns the user-friendly label for the value.
   String get label;
+
+  /// Sets the user-friendly label for the value.
+  void set label(String newLabel);
 
   /// The current state of this value.
   /// Only very occasionally a value is [writeOnly]

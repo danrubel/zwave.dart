@@ -19,7 +19,7 @@ part of zwave;
   generate(out, valueTypes, 'ValueType');
   generate(out, valueGenres, 'ValueGenre');
 
-  String path = Platform.script.resolve('../lib/zwave_g.dart').toFilePath();
+  String path = Platform.script.resolve('../lib/src/zwave_g.dart').toFilePath();
   print('writing $path');
   new File(path).writeAsStringSync(out.toString());
   print('--- generation complete');
@@ -30,8 +30,15 @@ void generate(StringBuffer out, Map<String, EnumValue> values, String name) {
   out.writeln();
   out.writeln('class $name {');
 
+  bool first = true;
   sorted = new List.from(values.values)..sort(sortEnumValueByName);
   for (EnumValue value in sorted) {
+    if (first) {
+      first = false;
+    } else {
+      out.writeln();
+    }
+    out.writeln(formatComment(value.comment, 2));
     out.writeln('  static const int ${value.name} = ${value.index};');
   }
   out.writeln();

@@ -11,6 +11,9 @@ main() {
 
 class MockZWave implements ZWave {
   @override
+  Device device(int nodeId, {int networkId}) => null;
+
+  @override
   List<Device> get devices => [];
 
   @override
@@ -40,4 +43,7 @@ class MockZWave implements ZWave {
   void writeConfig() {
     // TODO: implement writeConfig
   }
+
+  @override
+  String summary({bool allValues: false}) => 'mock';
 }
