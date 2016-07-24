@@ -43,9 +43,11 @@ main(List<String> args) async {
   }
 
   ZWave zwave;
-  test('bot', () async {
+
+  setUpAll(() async {
     print('initializing...');
     zwave = await ZWave.init(configPath, userPath: '/home/pi/dart/zdata');
+
     String version = zwave.version;
     print('  Open Z-Wave Library $version');
     expect(version, isNotEmpty);
@@ -59,56 +61,66 @@ main(List<String> args) async {
       await zwave.allUpdated();
     }
     zwave.writeConfig(); // optional - see docs
+  });
 
-    print('---- summary');
+  test('summary', () {
     print(zwave.summary(allValues: allValues));
+  });
 
-    print('---- exception messages');
+  test('exceptions', () {
     testException(() => zwave.device(999)); // impossible node id
     testException(() => zwave.device(1, networkId: 0x12345678)); // unknown net
     testException(() => zwave.device(1).value('unknown')); // unknown value
+  });
 
-    if (boolTest != null) {
-      Device device = zwave.device(boolTest[0]);
-      BoolValue value = device.value(boolTest[1]);
-      print('bool test $device $value ...');
-
-      bool original = value.current;
-      value.current = !original;
-      expect(await value.onChange.first, !original);
-      expect(value.current, !original);
-
-      await new Future.delayed(new Duration(seconds: 2));
-
-      value.current = original;
-      expect(await value.onChange.first, original);
-      expect(value.current, original);
-
-      await new Future.delayed(new Duration(milliseconds: 500));
+  test('value index', () {
+    for (Device device in zwave.devices) {
+      for (Value value in device.values) {
+        expect(value.index, greaterThan(-1));
+      }
     }
-    if (selectionTest != null) {
-      Device device = zwave.device(selectionTest[0]);
-      ListSelectionValue value = device.value(selectionTest[1]);
-      print('selection test $device $value ...');
+  });
 
-      String original = value.current;
-      value.current = selectionTest[2];
-      expect(await value.onChange.first, selectionTest[2]);
-      expect(value.current, selectionTest[2]);
+  test('value boolean', () async {
+    Device device = zwave.device(boolTest[0]);
+    BoolValue value = device.value(boolTest[1]);
+    print('bool test $device $value ...');
 
-      await new Future.delayed(new Duration(seconds: 2));
+    bool original = value.current;
+    value.current = !original;
+    expect(await value.onChange.first, !original);
+    expect(value.current, !original);
 
-      value.current = original;
-      expect(await value.onChange.first, original);
-      expect(value.current, original);
+    await new Future.delayed(new Duration(seconds: 2));
 
-      await new Future.delayed(new Duration(milliseconds: 500));
-    }
+    value.current = original;
+    expect(await value.onChange.first, original);
+    expect(value.current, original);
+
+    await new Future.delayed(new Duration(milliseconds: 500));
+  }, skip: boolTest == null ? 'skip' : false);
+
+  test('value selection', () async {
+    Device device = zwave.device(selectionTest[0]);
+    ListSelectionValue value = device.value(selectionTest[1]);
+    print('selection test $device $value ...');
+
+    String original = value.current;
+    value.current = selectionTest[2];
+    expect(await value.onChange.first, selectionTest[2]);
+    expect(value.current, selectionTest[2]);
+
+    await new Future.delayed(new Duration(seconds: 2));
+
+    value.current = original;
+    expect(await value.onChange.first, original);
+    expect(value.current, original);
+
+    await new Future.delayed(new Duration(milliseconds: 500));
+  }, skip: selectionTest == null ? 'skip' : false);
+
+  tearDownAll(() async {
     print('disposing...');
-    await zwave.dispose();
-    zwave = null;
-  }, timeout: timeout);
-  tearDown(() async {
     await zwave?.dispose();
   });
 }

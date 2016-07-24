@@ -63,6 +63,10 @@ int64_t HandleToInt(Dart_Handle handle) {
   return value;
 }
 
+Dart_Handle IntToHandle(int64_t value) {
+  return HandleError(Dart_NewInteger(value));
+}
+
 string HandleToString(Dart_Handle handle) {
   HandleError(handle);
   const char* cstr;
@@ -626,6 +630,17 @@ void getValueAsByte(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Sets the value of a byte.
+// _setByteValue(int networkId, int valueId, int newValue) native "setByteValue";
+void setByteValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  uint8 byteValue = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValue(*vid, byteValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
 // Gets a value as a float.
 // _getValueAsFloat(int networkId, int id) native "getValueAsFloat";
 void getValueAsFloat(Dart_NativeArguments arguments) {
@@ -673,6 +688,17 @@ void getValueAsShort(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Sets the value of a 16-bit signed integer.
+// _setShortValue(int networkId, int id, int newValue) native "setShortValue";
+void setShortValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int16 shortValue = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  Manager::Get()->SetValue(*vid, shortValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
 // Gets a value as a string.
 // _getValueAsString(int networkId, int id) native "getValueAsString";
 void getValueAsString(Dart_NativeArguments arguments) {
@@ -693,6 +719,17 @@ void getValueGenre(Dart_NativeArguments arguments) {
   ValueID::ValueGenre genre = vid->GetGenre();
   delete vid;
   Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(genre)));
+  Dart_ExitScope();
+}
+
+// Get the value index.
+// _getValueIndex(int networkId, int valueId) native "getValueIndex";
+void getValueIndex(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  int index = vid->GetIndex();
+  delete vid;
+  Dart_SetReturnValue(arguments, IntToHandle(index));
   Dart_ExitScope();
 }
 
@@ -872,6 +909,7 @@ FunctionLookup function_list[] = {
   {"getValueAsShort", getValueAsShort},
   {"getValueAsString", getValueAsString},
   {"getValueGenre", getValueGenre},
+  {"getValueIndex", getValueIndex},
   {"getValueLabel", getValueLabel},
   {"getValueListItems", getValueListItems},
   {"getValueListSelection", getValueListSelection},
@@ -883,9 +921,11 @@ FunctionLookup function_list[] = {
   {"isValueWriteOnly", isValueWriteOnly},
   {"refreshNodeInfo", refreshNodeInfo},
   {"setBoolValue", setBoolValue},
+  {"setByteValue", setByteValue},
   {"setIntValue", setIntValue},
   {"setListSelectionValue", setListSelectionValue},
   {"setNodeName", setNodeName},
+  {"setShortValue", setShortValue},
   {"setValueLabel", setValueLabel},
   {"version", version},
   {"writeConfig", writeConfig},

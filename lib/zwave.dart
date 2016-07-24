@@ -220,9 +220,19 @@ abstract class Device {
   /// Request all the device's data to be obtained from the Z-Wave network
   /// in the same way as if it had just been added.
   /// Return a future indicating whether or not the request was successful.
+  /// This can be combined with [isNotConfigured] to configured new devices
+  /// on startup.
+  ///
+  ///     for (Device device in zwave.devices) {
+  ///       if (device.isNotConfigured) device.update();
+  ///     }
+  ///
   Future<bool> update();
 
-  /// Return the [Value] with the specified [label].
+  /// Return the [Value] with the specified [label]. If the device has
+  /// more than one value with the same label, then you can supply an [index]
+  /// to specify which value is desired. The [index] is *not* the same as the
+  /// value's position in the list of [values] or [userValues].
   ///
   /// If no value matches [test], the result of invoking the [orElse]
   /// function is returned. If [orElse] is omitted or `null`, it defaults to
@@ -233,12 +243,19 @@ abstract class Device {
   ///       return device.value('defaultLabel')..label = 'myNiceLabel';
   ///     });
   ///
-  Value value(String label, {Value orElse()}) {
+  Value value(String label, {int index, Value orElse()}) {
     orElse ??= () {
       var labels = values.map((v) => v.label).toList()..sort();
       throw 'Expected label to be one of $labels';
     };
-    return values.firstWhere((v) => v.label == label, orElse: orElse);
+    // Search userValues first, then all values.
+    return userValues.firstWhere((v) {
+      return v.label == label && (index == null || v.index == index);
+    }, orElse: () {
+      return values.firstWhere((v) {
+        return v.label == label && (index == null || v.index == index);
+      }, orElse: orElse);
+    });
   }
 
   /// Return a list of all values associated with the device.
@@ -263,7 +280,7 @@ abstract class Device {
     }
     for (Value value in (allValues ? values : userValues)) {
       int lineStart = summary.length;
-      summary.write('  ${value.label} ($value)');
+      summary.write('  $value');
       if (value.readOnly) summary.write(' (readOnly)');
       if (value.writeOnly) summary.write(' (writeOnly)');
       while (summary.length < lineStart + 65) summary.write(' ');
@@ -286,7 +303,15 @@ abstract class Device {
     return summary.toString();
   }
 
-  String toString() => 'Device(0x${networkId.toRadixString(16)}, $nodeId)';
+  String toString() {
+    String name;
+    try {
+      name = this.name;
+    } catch (_) {
+      name = 'Device';
+    }
+    return '$name(0x${networkId.toRadixString(16)}, $nodeId)';
+  }
 }
 
 /// A notification received from the [ZWave] manager.
@@ -317,6 +342,11 @@ abstract class Value<T> {
 
   bool get readOnly;
   bool get writeOnly;
+
+  /// Return the index of the value. You can differentiate different values
+  /// with the same [label] by the value's [index]. The [index] is
+  /// *not* the same as the value's position in the [Device]'s list of values.
+  int get index;
 
   /// Returns the user-friendly label for the value.
   String get label;

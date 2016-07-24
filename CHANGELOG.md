@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+* add Value.index to differentiate between values with the same label
+* update Device.value(...) to search userValues first then all values
+* enhance toString to include device name and value label
+* fix Value.min and max
+* add support for setting short and byte values
+
 ## 0.3.0
 * update generate to include comments in src/zwave_g.dart
 * new ZWave deviceSummary convenience method for listing device info
