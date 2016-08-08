@@ -70,7 +70,14 @@ abstract class ZWave {
   /// then only the [nodeId] of the device needs to be specified.
   /// If there are two or more Z-Wave controllers
   /// then both the [nodeId] and the [networkId] must be specified.
-  Device device(int nodeId, {int networkId});
+  ///
+  /// If [name] is not `null`, then the device name will be set to that value.
+  /// You may optionally specify a [configuration] map for setting the device's
+  /// configuration [Value]s. The [configuration] map keys are either the
+  /// [Value] name or the [Value] index, while the [Value] current value is
+  /// set to the corresponding map value. An exception is thrown if the [Value]
+  /// cannot be found of the [Value] current value cannot be set.
+  Device device(int nodeId, {int networkId, String name, Map configuration});
 
   /// Return a list of the known [Device]s
   /// including the associated Z-Wave controller(s).
@@ -79,6 +86,7 @@ abstract class ZWave {
   /// then you can obtain the desired [Device] via
   ///
   ///     Device device = zwave.devices.firstWhere((d) => d.nodeId == someId);
+  ///
   List<Device> get devices;
 
   /// Return the version of the Open Z-Wave library
@@ -105,6 +113,9 @@ abstract class ZWave {
   /// including sleeping devices, has been updated.
   Future allUpdated();
 
+  /// Return number of seconds between polls of a node's state.
+  int get pollInterval;
+
   /// Disconnect from the Z-Wave controller, cleanup any resources, and write
   /// the Z-Wave network configuration to a file in the user data directory
   /// (see [writeConfig]).
@@ -126,6 +137,7 @@ abstract class ZWave {
   /// Return a human readable summary of known devices and their values.
   String summary({bool allValues: false}) {
     var summary = new StringBuffer();
+    summary.writeln('poll interval: $pollInterval seconds');
     for (Device device in devices) {
       summary.write(device.summary(allValues: allValues));
     }
@@ -214,7 +226,8 @@ abstract class Device {
 
   int get hashCode => networkId * 256 + nodeId;
 
-  /// A stream of [Notification]s related to this device.
+  /// A stream of [Notification]s related to this device
+  /// including [NodeEvents] and [SceneEvents].
   Stream<Notification> get onNotification;
 
   /// Request all the device's data to be obtained from the Z-Wave network
@@ -234,7 +247,7 @@ abstract class Device {
   /// to specify which value is desired. The [index] is *not* the same as the
   /// value's position in the list of [values] or [userValues].
   ///
-  /// If no value matches [test], the result of invoking the [orElse]
+  /// If no value is found, the result of invoking the [orElse]
   /// function is returned. If [orElse] is omitted or `null`, it defaults to
   /// throwing an exception indicating no matching [Value] was found.
   /// For example:
@@ -258,6 +271,10 @@ abstract class Device {
     });
   }
 
+  /// Return the [Value] with the specified [index].
+  /// Throw an exception if no [Value] is found.
+  Value valueByIndex(int index) => values.firstWhere((v) => v.index == index);
+
   /// Return a list of all values associated with the device.
   List<Value> get values;
 
@@ -268,27 +285,31 @@ abstract class Device {
   String summary({bool allValues: false}) {
     var summary = new StringBuffer();
     summary.write('${toString()} - ');
-    if (manufacturerName == '') {
-      summary.write('${manufacturerId} ');
+    if (manufacturerName.isEmpty) {
+      summary.write(manufacturerId);
     } else {
-      summary.write('${manufacturerName} ');
+      summary.write(manufacturerName);
     }
-    if (productName == '') {
-      summary.writeln('${productId}');
+    if (productName.isEmpty) {
+      summary.writeln(', ${productId}');
     } else {
-      summary.writeln('${productName}');
+      summary.writeln(', ${productName}');
     }
     for (Value value in (allValues ? values : userValues)) {
       int lineStart = summary.length;
       summary.write('  $value');
-      if (value.readOnly) summary.write(' (readOnly)');
-      if (value.writeOnly) summary.write(' (writeOnly)');
+      if (value.readOnly) summary.write(', readOnly');
+      if (value.writeOnly) summary.write(', writeOnly');
       while (summary.length < lineStart + 65) summary.write(' ');
       summary.write(' = ${value.current}');
       if (value is ListSelectionValue) {
         summary.write(' - ${value.currentIndex}');
       }
       summary.writeln();
+
+      if (value.pollIntensity > 0) {
+        summary.write('    pollIntensity = ${value.pollIntensity}');
+      }
 
       if (value is IntValue) {
         summary.writeln('    min ${value.min}, max ${value.max}');
@@ -299,6 +320,8 @@ abstract class Device {
         }
         summary.writeln();
       }
+      String help = value.help;
+      if (help?.isNotEmpty == true) summary.writeln('    help: $help');
     }
     return summary.toString();
   }
@@ -307,9 +330,8 @@ abstract class Device {
     String name;
     try {
       name = this.name;
-    } catch (_) {
-      name = 'Device';
-    }
+    } catch (_) {}
+    if (name == null || name.isEmpty) name = 'Device';
     return '$name(0x${networkId.toRadixString(16)}, $nodeId)';
   }
 }
@@ -318,14 +340,35 @@ abstract class Device {
 class Notification {
   final Device device;
   final int notificationIndex;
-  final int sceneId;
   final List rawMessage;
 
-  Notification(this.device, this.notificationIndex, this.rawMessage,
-      {this.sceneId});
+  Notification(this.device, this.notificationIndex, this.rawMessage);
 
   String toString() =>
       '$device ${NotificationType.name(notificationIndex)} $rawMessage)';
+}
+
+/// A device notification received from the [ZWave] manager.
+class NodeEvent extends Notification {
+  final int event;
+
+  NodeEvent(Device device, int notificationIndex, List rawMessage, this.event)
+      : super(device, notificationIndex, rawMessage);
+
+  String toString() =>
+      '$device ${NotificationType.name(notificationIndex)} event:$event $rawMessage)';
+}
+
+/// A device scene event received from the [ZWave] manager.
+class SceneEvent extends Notification {
+  final int sceneId;
+
+  SceneEvent(
+      Device device, int notificationIndex, List rawMessage, this.sceneId)
+      : super(device, notificationIndex, rawMessage);
+
+  String toString() =>
+      '$device ${NotificationType.name(notificationIndex)} scene:$sceneId $rawMessage)';
 }
 
 /// Abstract representation of a specific value.
@@ -353,6 +396,14 @@ abstract class Value<T> {
 
   /// Sets the user-friendly label for the value.
   void set label(String newLabel);
+
+  /// Get the help text for the value.
+  String get help;
+
+  /// Return the frequency of polling with respect to the [ZWave.pollInterval]
+  /// where 0 = no polling, 1 = poll once every poll interval,
+  /// 2 = poll every other poll interval, etc.
+  int get pollIntensity;
 
   /// The current state of this value.
   /// Only very occasionally a value is [writeOnly]

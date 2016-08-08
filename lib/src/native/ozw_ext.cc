@@ -164,48 +164,7 @@ void OnNotification(Notification const* _notification, void* _context) {
   };
 
   switch( notificationType ) {
-  //   case Notification::Type_PollingDisabled:
-  //   {
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       nodeInfo->m_polled = false;
-  //     }
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_PollingEnabled:
-  //   {
-  //     if( NodeInfo* nodeInfo = GetNodeInfo( _notification ) )
-  //     {
-  //       nodeInfo->m_polled = true;
-  //     }
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_DriverReady:
-  //   {
-  //     g_homeId = _notification->GetHomeId();
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_DriverFailed:
-  //   {
-  //     g_initFailed = true;
-  //     pthread_cond_broadcast(&initCond);
-  //     break;
-  //   }
-  //
-  //   case Notification::Type_AwakeNodesQueried:
-  //   case Notification::Type_AllNodesQueried:
-  //   case Notification::Type_AllNodesQueriedSomeDead:
-  //   {
-  //     pthread_cond_broadcast(&initCond);
-  //     break;
-  //   }
-  //
   //   case Notification::Type_DriverReset:
-  //   case Notification::Type_Notification:
-  //   case Notification::Type_NodeQueriesComplete:
 
     case Notification::Type_CreateButton:
     case Notification::Type_ButtonOn:
@@ -287,7 +246,6 @@ void OnNotification(Notification const* _notification, void* _context) {
     case Notification::Type_NodeAdded:
     case Notification::Type_NodeProtocolInfo:
     case Notification::Type_NodeNaming:
-    case Notification::Type_NodeEvent:
     case Notification::Type_NodeRemoved:
     case Notification::Type_NodeReset:
     case Notification::Type_EssentialNodeQueriesComplete:
@@ -301,6 +259,23 @@ void OnNotification(Notification const* _notification, void* _context) {
       };
       message.type = Dart_CObject_kArray;
       message.value.as_array.length = 3;
+      message.value.as_array.values = messageParts;
+      break;
+    }
+
+    case Notification::Type_NodeEvent: {
+      uint8 eventInt = _notification->GetEvent();
+      Dart_CObject event = {
+        Dart_CObject_kInt32, { .as_int32 = eventInt }
+      };
+      Dart_CObject* messageParts[4] = {
+        &notificationTypeValue,
+        &homeId,
+        &nodeId,
+        &event,
+      };
+      message.type = Dart_CObject_kArray;
+      message.value.as_array.length = 4;
       message.value.as_array.values = messageParts;
       break;
     }
@@ -722,6 +697,17 @@ void getValueGenre(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Gets a help string describing the value's purpose and usage.
+// _getValueHelp(int networkId, int id) native "getValueHelp";
+void getValueHelp(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  string help = Manager::Get()->GetValueHelp(*vid);
+  delete vid;
+  Dart_SetReturnValue(arguments, StringToHandle(help));
+  Dart_ExitScope();
+}
+
 // Get the value index.
 // _getValueIndex(int networkId, int valueId) native "getValueIndex";
 void getValueIndex(Dart_NativeArguments arguments) {
@@ -855,6 +841,29 @@ void isValueWriteOnly(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Get the polling intensity of a device's state.
+// _pollIntensity(int networkId, int id) native "pollIntensity";
+void pollIntensity(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  uint8 intensity = 0;
+  if (Manager::Get()->isPolled(*vid)) {
+    intensity = Manager::Get()->GetPollIntensity(*vid);
+  }
+  delete vid;
+  Dart_SetReturnValue(arguments, IntToHandle(intensity));
+  Dart_ExitScope();
+}
+
+// Return the time period between polls of a node's state.
+// int get pollInterval native "pollInterval";
+void pollInterval(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  int32 interval = Manager::Get()->GetPollInterval();
+  Dart_SetReturnValue(arguments, IntToHandle(interval));
+  Dart_ExitScope();
+}
+
 void refreshNodeInfo(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
@@ -909,6 +918,7 @@ FunctionLookup function_list[] = {
   {"getValueAsShort", getValueAsShort},
   {"getValueAsString", getValueAsString},
   {"getValueGenre", getValueGenre},
+  {"getValueHelp", getValueHelp},
   {"getValueIndex", getValueIndex},
   {"getValueLabel", getValueLabel},
   {"getValueListItems", getValueListItems},
@@ -919,6 +929,8 @@ FunctionLookup function_list[] = {
   {"initialize", initialize},
   {"isValueReadOnly", isValueReadOnly},
   {"isValueWriteOnly", isValueWriteOnly},
+  {"pollIntensity", pollIntensity},
+  {"pollInterval", pollInterval},
   {"refreshNodeInfo", refreshNodeInfo},
   {"setBoolValue", setBoolValue},
   {"setByteValue", setByteValue},

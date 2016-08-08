@@ -11,7 +11,8 @@ main() {
 
 class MockZWave implements ZWave {
   @override
-  Device device(int nodeId, {int networkId}) => null;
+  Device device(int nodeId, {int networkId, String name, Map configuration}) =>
+      null;
 
   @override
   List<Device> get devices => [];
@@ -33,6 +34,9 @@ class MockZWave implements ZWave {
   Future allUpdated() async {
     // TODO: implement allUpdated
   }
+
+  @override
+  int get pollInterval => null;
 
   @override
   Future dispose() async {

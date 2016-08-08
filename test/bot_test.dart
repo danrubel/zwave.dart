@@ -12,7 +12,6 @@ const configPath = '/usr/local/etc/openzwave/';
 
 main(List<String> args) async {
   bool allValues = false;
-  Timeout timeout = new Timeout(new Duration(minutes: 1));
   List<dynamic> boolTest;
   List<dynamic> selectionTest;
   bool waitForAllUpdated = false;
@@ -31,9 +30,6 @@ main(List<String> args) async {
       // test a selection value by toggling that value
       // --testSelection=<nodeId>/<value-label>/<selection>
       selectionTest = parseNodeValue(args[argIndex]);
-    } else if (args[argIndex].startsWith('--timeout=')) {
-      timeout = new Timeout(
-          new Duration(minutes: int.parse(args[argIndex].substring(10))));
     } else if (args[argIndex] == '--waitForAllUpdated') {
       waitForAllUpdated = true;
     } else {
@@ -81,8 +77,16 @@ main(List<String> args) async {
     }
   });
 
+  test('value polling', () {
+    for (Device device in zwave.devices) {
+      for (Value value in device.values) {
+        expect(value.pollIntensity, greaterThanOrEqualTo(0));
+      }
+    }
+  });
+
   test('value boolean', () async {
-    Device device = zwave.device(boolTest[0]);
+    Device device = zwave.devices.firstWhere((d) => d.name == boolTest[0]);
     BoolValue value = device.value(boolTest[1]);
     print('bool test $device $value ...');
 
@@ -101,7 +105,7 @@ main(List<String> args) async {
   }, skip: boolTest == null ? 'skip' : false);
 
   test('value selection', () async {
-    Device device = zwave.device(selectionTest[0]);
+    Device device = zwave.devices.firstWhere((d) => d.name == selectionTest[0]);
     ListSelectionValue value = device.value(selectionTest[1]);
     print('selection test $device $value ...');
 

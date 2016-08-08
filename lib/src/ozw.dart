@@ -24,7 +24,7 @@ class OZW extends ZWave {
   Completer _allDevicesUpdated;
 
   @override
-  Device device(int nodeId, {int networkId}) {
+  Device device(int nodeId, {int networkId, String name, Map configuration}) {
     Map<int, _OZWDevice> network;
     if (networkId != null) {
       network = _networkDeviceMap[networkId];
@@ -42,6 +42,20 @@ class OZW extends ZWave {
     if (device == null) {
       throw 'Expected nodeId to be one of ${network.keys.toList()..sort()}';
     }
+    if (name != null && device.name != name) device.name = name;
+    configuration?.forEach((key, value) {
+      Value configValue;
+      if (key is String) {
+        configValue = device.value(key);
+      } else if (key is int) {
+        configValue = device.valueByIndex(key);
+      } else {
+        throw 'Expected String or int configuration key, but found: $key';
+      }
+      if (configValue.writeOnly || configValue.current != value) {
+        configValue.current = value;
+      }
+    });
     return device;
   }
 
@@ -98,6 +112,9 @@ class OZW extends ZWave {
   Future allUpdated() => _allDevicesUpdated?.future ?? new Future.value();
 
   @override
+  int get pollInterval native "pollInterval";
+
+  @override
   Future dispose() async {
     await _notificationSubscription?.cancel();
     _notificationSubscription = null;
@@ -134,10 +151,22 @@ class OZW extends ZWave {
         if (device != null) {
           var controller = device._notificationController;
           if (controller != null) {
-            controller.add(new Notification(device, notificationIndex, message,
-                sceneId: (notificationIndex == NotificationType.SceneEvent
-                    ? message[3]
-                    : null)));
+            Notification notification;
+            switch (notificationIndex) {
+              case NotificationType.NodeEvent:
+                notification = new NodeEvent(
+                    device, notificationIndex, message, message[3]);
+                break;
+              case NotificationType.SceneEvent:
+                notification = new SceneEvent(
+                    device, notificationIndex, message, message[3]);
+                break;
+              default:
+                notification =
+                    new Notification(device, notificationIndex, message);
+                break;
+            }
+            controller.add(notification);
           }
         }
       }
@@ -321,6 +350,7 @@ class OZW extends ZWave {
   _getValueMax(int networkId, int valueId) native "getValueMax";
 
   _getValueGenre(int networkId, int valueId) native "getValueGenre";
+  _getValueHelp(int networkId, int id) native "getValueHelp";
   _getValueIndex(int networkId, int valueId) native "getValueIndex";
   _getValueLabel(int networkId, int valueId) native "getValueLabel";
   _setValueLabel(int networkId, int valueId, String newLabel)
@@ -328,6 +358,7 @@ class OZW extends ZWave {
 
   _isValueReadOnly(int networkId, int valueId) native "isValueReadOnly";
   _isValueWriteOnly(int networkId, int valueId) native "isValueWriteOnly";
+  _pollIntensity(int networkId, int id) native "pollIntensity";
 
   _setBoolValue(int networkId, int valueId, bool newValue)
       native "setBoolValue";
@@ -430,6 +461,9 @@ class _OZWValue<T> implements Value<T> {
       device.zwave._setValueLabel(device.networkId, id, newLabel);
 
   @override
+  String get help => device.zwave._getValueHelp(device.networkId, id);
+
+  @override
   int get index => device.zwave._getValueIndex(device.networkId, id);
 
   @override
@@ -447,11 +481,19 @@ class _OZWValue<T> implements Value<T> {
     return _changeStream;
   }
 
+  @override
+  int get pollIntensity => device.zwave._pollIntensity(device.networkId, id);
+
   String _toString(String typeName) {
+    String label;
     try {
-      return '$label($typeName, $id)';
+      label = this.label;
+    } catch (_) {}
+    if (label == null || label.isEmpty) return '$typeName($id)';
+    try {
+      return '$label($typeName, $id, $index)';
     } catch (_) {
-      return '$typeName($id)';
+      return '$label($typeName, $id)';
     }
   }
 }

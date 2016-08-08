@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+* enhance ZWave.device to optionally set device name and configuration
+* add ZWave.pollInterval and Value.pollIntensity accessors
+* add Value help text and Device.valueByIndex accessors
+* new NodeEvent and SceneEvent subclasses of Notification
+
 ## 0.5.0
 * add Value.index to differentiate between values with the same label
 * update Device.value(...) to search userValues first then all values
