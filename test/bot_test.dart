@@ -5,7 +5,7 @@ import 'package:zwave/zwave.dart';
 import 'dart:async';
 
 /// Port used by the Open Z-Wave library to access the Z-Wave Controller.
-const controllerPort = '/dev/ttyACM0';
+String controllerPort = '/dev/ttyACM0';
 
 /// Configuration directory containing the manufacturer_specific.xml file.
 const configPath = '/usr/local/etc/openzwave/';
@@ -30,6 +30,10 @@ main(List<String> args) async {
       // test a selection value by toggling that value
       // --testSelection=<nodeId>/<value-label>/<selection>
       selectionTest = parseNodeValue(args[argIndex]);
+    } else if (args[argIndex].startsWith('--controllerPort=')) {
+      // test a selection value by toggling that value
+      // --testSelection=<nodeId>/<value-label>/<selection>
+      controllerPort = args[argIndex].split('=')[1];
     } else if (args[argIndex] == '--waitForAllUpdated') {
       waitForAllUpdated = true;
     } else {
@@ -67,6 +71,21 @@ main(List<String> args) async {
     testException(() => zwave.device(999)); // impossible node id
     testException(() => zwave.device(1, networkId: 0x12345678)); // unknown net
     testException(() => zwave.device(1).value('unknown')); // unknown value
+  });
+
+  test('device neighbors', () {
+    for (Device device in zwave.devices) {
+      print('  $device');
+      var neighborIds = device.neighborIds;
+      if (neighborIds.isEmpty) {
+        print('    no neighbors... dead node?');
+      } else {
+        for (int neighborId in neighborIds) {
+          var neighbor = zwave.device(neighborId, networkId: device.networkId);
+          print('    $neighbor');
+        }
+      }
+    }
   });
 
   test('value index', () {

@@ -434,10 +434,42 @@ void connect(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Heal network by requesting node's rediscover their neighbors.
+// _heal(int networkId, bool updateReturnRouting) native "heal";
+void heal(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  bool updateReturnRouting = HandleToBool(Dart_GetNativeArgument(arguments, 2));
+  Manager::Get()->HealNetwork(homeId, updateReturnRouting);
+  Dart_ExitScope();
+}
+
 // Deletes the Manager and cleans up any associated objects.
 void destroy(Dart_NativeArguments arguments) {
   Dart_EnterScope();
   Manager::Destroy();
+  Dart_ExitScope();
+}
+
+// Start the Inclusion Process to add a Node to the Network.
+// Return true if the command was successfully sent to the controller.
+// bool _addNode(int networkId) native "addNode";
+void addNode(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  bool result = Manager::Get()->AddNode(homeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(result)));
+  Dart_ExitScope();
+}
+
+// Start the process of removing a Device from the Z-Wave Network.
+// Return true if the command was successfully sent to the controller.
+// bool _removeNode(int networkId) native "removeNode";
+void removeNode(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  bool result = Manager::Get()->RemoveNode(homeId);
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewBoolean(result)));
   Dart_ExitScope();
 }
 
@@ -562,6 +594,29 @@ void getNodeProductType(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Get a nodeId list representing the neighboring devices of the specified device.
+// _getNodeNeighbors(int networkId, int nodeId) native "getNodeNeighbors";
+void getNodeNeighbors(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+
+  uint8* neighbors;
+  uint32 numNeighbors = Manager::Get()->GetNodeNeighbors(homeId, nodeId, &neighbors);
+
+  Dart_Handle list = HandleError(Dart_NewList(numNeighbors));
+  if (numNeighbors > 0) {
+    for (uint32 index = 0; index < numNeighbors; ++index) {
+      uint8 neighborId = neighbors[index];
+      HandleError(Dart_ListSetAt(list, index, HandleError(Dart_NewInteger(neighborId))));
+    }
+    delete [] neighbors;
+  }
+
+  Dart_SetReturnValue(arguments, list);
+  Dart_ExitScope();
+}
+
 // Return a ValidID for arguments 1 (homeId) and 2 (valueId).
 // The returned object *must* be deleted after use.
 ValueID* ArgsToNewValueID(Dart_NativeArguments arguments) {
@@ -647,6 +702,40 @@ void setIntValue(Dart_NativeArguments arguments) {
   ValueID* vid = ArgsToNewValueID(arguments);
   int32 intValue = HandleToInt(Dart_GetNativeArgument(arguments, 3));
   Manager::Get()->SetValue(*vid, intValue);
+  delete vid;
+  Dart_ExitScope();
+}
+
+// Gets a value as a collection of bytes.
+// _getValueAsRaw(int networkId, int id) native "getValueAsRaw";
+void getValueAsRaw(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  uint8* o_value;
+  uint8 o_length;
+  Manager::Get()->GetValueAsRaw(*vid, &o_value, &o_length);
+  delete vid;
+
+  Dart_Handle list = HandleError(Dart_NewList(o_length));
+  HandleError(Dart_ListSetAsBytes(list, 0, o_value, o_length));
+
+//  intptr_t length = o_length;
+//  Dart_Handle list = HandleError(Dart_NewList(length));
+//  for (intptr_t index = 0; index < length; ++index) {
+//    int64_t byteValue = *o_value;
+//    HandleError(Dart_ListSetAt(list, index, IntToHandle(byteValue)));
+//    ++o_value;
+//  }
+  Dart_SetReturnValue(arguments, list);
+  Dart_ExitScope();
+}
+
+// Sets the value of a collection of bytes.
+// _setRawValue(int networkId, int id, List<int> newValue) native "setRawValue";
+void setRawValue(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  ValueID* vid = ArgsToNewValueID(arguments);
+  // TODO
   delete vid;
   Dart_ExitScope();
 }
@@ -899,15 +988,17 @@ struct FunctionLookup {
 };
 
 FunctionLookup function_list[] = {
+  {"addNode", addNode},
   {"connect", connect},
   {"destroy", destroy},
   {"getNodeBasic", getNodeBasic},
   {"getNodeGeneric", getNodeGeneric},
   {"getNodeSpecific", getNodeSpecific},
   {"getNodeType", getNodeType},
-  {"getNodeName", getNodeName},
   {"getNodeManufacturerId", getNodeManufacturerId},
   {"getNodeManufacturerName", getNodeManufacturerName},
+  {"getNodeName", getNodeName},
+  {"getNodeNeighbors", getNodeNeighbors},
   {"getNodeProductId", getNodeProductId},
   {"getNodeProductName", getNodeProductName},
   {"getNodeProductType", getNodeProductType},
@@ -915,6 +1006,7 @@ FunctionLookup function_list[] = {
   {"getValueAsByte", getValueAsByte},
   {"getValueAsFloat", getValueAsFloat},
   {"getValueAsInt", getValueAsInt},
+  {"getValueAsRaw", getValueAsRaw},
   {"getValueAsShort", getValueAsShort},
   {"getValueAsString", getValueAsString},
   {"getValueGenre", getValueGenre},
@@ -926,17 +1018,20 @@ FunctionLookup function_list[] = {
   {"getValueListSelectionIndex", getValueListSelectionIndex},
   {"getValueMin", getValueMin},
   {"getValueMax", getValueMax},
+  {"heal", heal},
   {"initialize", initialize},
   {"isValueReadOnly", isValueReadOnly},
   {"isValueWriteOnly", isValueWriteOnly},
   {"pollIntensity", pollIntensity},
   {"pollInterval", pollInterval},
   {"refreshNodeInfo", refreshNodeInfo},
+  {"removeNode", removeNode},
   {"setBoolValue", setBoolValue},
   {"setByteValue", setByteValue},
   {"setIntValue", setIntValue},
   {"setListSelectionValue", setListSelectionValue},
   {"setNodeName", setNodeName},
+  {"setRawValue", setRawValue},
   {"setShortValue", setShortValue},
   {"setValueLabel", setValueLabel},
   {"version", version},

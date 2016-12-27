@@ -22,6 +22,8 @@ class OZW extends ZWave {
   Completer _driverConnected;
   Completer _awakeDevicesUpdated;
   Completer _allDevicesUpdated;
+  Completer<Device> _deviceAdded;
+  Completer<int> _deviceRemoved;
 
   @override
   Device device(int nodeId, {int networkId, String name, Map configuration}) {
@@ -33,10 +35,7 @@ class OZW extends ZWave {
       if (networks.length == 1) network = networks.first;
     }
     if (network == null) {
-      var networkKeys = _networkDeviceMap.keys
-          .map((key) => '0x${key.toRadixString(16)}')
-          .toList();
-      throw 'Expected networkId to be one of $networkKeys';
+      throw 'Expected networkId to be one of $_networkIds';
     }
     var device = network[nodeId];
     if (device == null) {
@@ -100,6 +99,12 @@ class OZW extends ZWave {
   }
 
   @override
+  void heal({int networkId}) {
+    networkId ??= _defaultNetworkId;
+    _heal(networkId, true);
+  }
+
+  @override
   Future update() {
     if (_awakeDevicesUpdated == null) {
       // trigger an update of all known devices
@@ -113,6 +118,24 @@ class OZW extends ZWave {
 
   @override
   int get pollInterval native "pollInterval";
+
+  @override
+  Future<Device> addDevice({int networkId}) {
+    if (_deviceAdded != null) throw 'already adding a device';
+    networkId ??= _defaultNetworkId;
+    if (!_addNode(networkId)) throw 'add node failed';
+    _deviceAdded = new Completer<Device>();
+    return _deviceAdded.future;
+  }
+
+  @override
+  Future<int> removeDevice({int networkId}) async {
+    if (_deviceRemoved != null) throw 'already removing a device';
+    networkId ??= _defaultNetworkId;
+    if (!_removeNode(networkId)) throw 'remove node failed';
+    _deviceRemoved = new Completer<int>();
+    return _deviceRemoved.future;
+  }
 
   @override
   Future dispose() async {
@@ -131,6 +154,15 @@ class OZW extends ZWave {
   }
 
   // ===== Internal =======================================================
+
+  int get _defaultNetworkId {
+    if (_networkDeviceMap.length == 1) return _networkDeviceMap.keys.first;
+    throw 'Expected networkId to be one of $_networkIds';
+  }
+
+  List<int> get _networkIds => _networkDeviceMap.keys
+      .map((key) => '0x${key.toRadixString(16)}')
+      .toList();
 
   /// Process a native notification.
   /// If the message is an integer, then it is the notification type.
@@ -207,10 +239,14 @@ class OZW extends ZWave {
           return device;
         });
         device.lastMsgTime = new DateTime.now();
+        _deviceAdded?.complete(device);
+        _deviceAdded = null;
         return;
 
       case NotificationType.NodeRemoved:
         _networkDeviceMap[networkId]?.remove(nodeId);
+        _deviceRemoved?.complete(nodeId);
+        _deviceRemoved = null;
         return;
 
       case NotificationType.ValueAdded:
@@ -241,6 +277,12 @@ class OZW extends ZWave {
                 break;
               case ValueType.List:
                 value = new _OZWListSelectionValue(device, valueId);
+                break;
+              case ValueType.Raw:
+                value = new _OZWRawValue(device, valueId);
+                break;
+              case ValueType.Schedule:
+                value = new _OZWScheduleValue(device, valueId);
                 break;
               case ValueType.Short:
                 value = new _OZWShortValue(device, valueId);
@@ -297,6 +339,10 @@ class OZW extends ZWave {
   /// until the [NotificationType.DriverReady] notification is received.
   void _connect(String port) native "connect";
 
+  /// Heal network by requesting node's rediscover their neighbors.
+  /// if [updateReturnRouting] is `true` then return routes are initialized
+  _heal(int networkId, bool updateReturnRouting) native "heal";
+
   /// Initialize the Open Z-Wave library.
   ///
   /// [configPath] is the path to the configuration directory
@@ -333,10 +379,13 @@ class OZW extends ZWave {
   _getNodeProductName(int networkId, int nodeId) native "getNodeProductName";
   _getNodeProductType(int networkId, int nodeId) native "getNodeProductType";
 
+  _getNodeNeighbors(int networkId, int nodeId) native "getNodeNeighbors";
+
   _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
   _getValueAsByte(int networkId, int valueId) native "getValueAsByte";
   _getValueAsFloat(int networkId, int valueId) native "getValueAsFloat";
   _getValueAsInt(int networkId, int valueId) native "getValueAsInt";
+  _getValueAsRaw(int networkId, int id) native "getValueAsRaw";
   _getValueAsShort(int networkId, int valueId) native "getValueAsShort";
   _getValueAsString(int networkId, int valueId) native "getValueAsString";
 
@@ -360,12 +409,16 @@ class OZW extends ZWave {
   _isValueWriteOnly(int networkId, int valueId) native "isValueWriteOnly";
   _pollIntensity(int networkId, int id) native "pollIntensity";
 
+  bool _addNode(int networkId) native "addNode";
+  bool _removeNode(int networkId) native "removeNode";
+
   _setBoolValue(int networkId, int valueId, bool newValue)
       native "setBoolValue";
   _setByteValue(int networkId, int valueId, int newValue) native "setByteValue";
   _setIntValue(int networkId, int valueId, int newValue) native "setIntValue";
   _setListSelectionValue(int networkId, int valueId, String newValue)
       native "setListSelectionValue";
+  _setRawValue(int networkId, int id, List<int> newValue) native "setRawValue";
   _setShortValue(int networkId, int id, int newValue) native "setShortValue";
 
   _refreshNodeInfo(int networkId, int nodeId) native "refreshNodeInfo";
@@ -377,7 +430,6 @@ class _OZWDevice extends Device {
   final OZW zwave;
   final Map<int, _OZWValue> _valueMap = <int, _OZWValue>{};
   StreamController<Notification> _notificationController;
-  Stream<Notification> _notificationStream;
 
   _OZWDevice(this.zwave, int networkId, int nodeId) : super(networkId, nodeId);
 
@@ -417,15 +469,15 @@ class _OZWDevice extends Device {
   String get productType => zwave._getNodeProductType(networkId, nodeId);
 
   @override
+  List<int> get neighborIds => zwave._getNodeNeighbors(networkId, nodeId);
+
+  @override
   List<Value> get values => new List.from(_valueMap.values);
 
   @override
   Stream<Notification> get onNotification {
-    if (_notificationController == null) {
-      _notificationController = new StreamController<Notification>();
-      _notificationStream = _notificationController.stream.asBroadcastStream();
-    }
-    return _notificationStream;
+    _notificationController ??= new StreamController<Notification>.broadcast();
+    return _notificationController.stream;
   }
 
   @override
@@ -440,7 +492,6 @@ class _OZWValue<T> implements Value<T> {
   final _OZWDevice device;
   final int id;
   StreamController<T> _changeController;
-  Stream<T> _changeStream;
 
   _OZWValue(this.device, this.id);
 
@@ -474,11 +525,8 @@ class _OZWValue<T> implements Value<T> {
 
   @override
   Stream<T> get onChange {
-    if (_changeController == null) {
-      _changeController = new StreamController<T>();
-      _changeStream = _changeController.stream.asBroadcastStream();
-    }
-    return _changeStream;
+    _changeController ??= new StreamController<T>.broadcast();
+    return _changeController.stream;
   }
 
   @override
@@ -582,6 +630,27 @@ class _OZWListSelectionValue extends _OZWValue<String>
 
   @override
   String toString() => _toString('ListSelectionValue');
+}
+
+class _OZWRawValue extends _OZWValue<List<int>> implements RawValue {
+  _OZWRawValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  List<int> get current => device.zwave._getValueAsRaw(device.networkId, id);
+
+  @override
+  void set current(List<int> newValue) =>
+      device.zwave._setRawValue(device.networkId, id, newValue);
+
+  @override
+  String toString() => _toString('RawValue');
+}
+
+class _OZWScheduleValue extends _OZWValue<dynamic> implements ScheduleValue {
+  _OZWScheduleValue(_OZWDevice device, int id) : super(device, id);
+
+  @override
+  String toString() => _toString('ScheduleValue');
 }
 
 class _OZWShortValue extends _OZWIntValue {

@@ -102,6 +102,11 @@ abstract class ZWave {
   /// * Linux:   "/dev/ttyUSB0" or "/dev/ttyACM0"
   Future connect(String port);
 
+  /// Heal network by requesting node's rediscover their neighbors.
+  /// The [networkId] need only be specified
+  /// if there are two or more Z-Wave controllers.
+  void heal({int networkId});
+
   /// Update (or finish updating) the list of known devices.
   /// Returns a future when all nodes (or all awake nodes) have been updated
   /// and the zwave manager is ready for commands.
@@ -115,6 +120,22 @@ abstract class ZWave {
 
   /// Return number of seconds between polls of a node's state.
   int get pollInterval;
+
+  /// Calling [addDevice] puts the controller in add mode
+  /// so that a device may be manually added to the network.
+  /// This method returns a [Future] that completes with the device
+  /// that was added or an error if the add failed.
+  /// The [networkId] need only be specified
+  /// if there are two or more Z-Wave controllers.
+  Future<Device> addDevice({int networkId});
+
+  /// Calling [removeDevice] puts the controller in remove mode
+  /// so that a device may be manually removed from the network.
+  /// This method returns a [Future] that completes with the id of the device
+  /// that was removed or an error if the remove failed.
+  /// The [networkId] need only be specified
+  /// if there are two or more Z-Wave controllers.
+  Future<int> removeDevice({int networkId});
 
   /// Disconnect from the Z-Wave controller, cleanup any resources, and write
   /// the Z-Wave network configuration to a file in the user data directory
@@ -226,7 +247,11 @@ abstract class Device {
 
   int get hashCode => networkId * 256 + nodeId;
 
-  /// A stream of [Notification]s related to this device
+  /// Return an array of nodeIds representing the nodes with which
+  /// this node can communicate.
+  List<int> get neighborIds;
+
+  /// A broadcast stream of [Notification]s related to this device
   /// including [NodeEvents] and [SceneEvents].
   Stream<Notification> get onNotification;
 
@@ -412,7 +437,7 @@ abstract class Value<T> {
 
   /// Set the current state of this value (if not [readOnly]).
   /// Due to the possibility of a device being asleep, the operation is assumed
-  /// to suceed, the local value is updated directly, and an [onChange]
+  /// to succeed, the local value is updated directly, and an [onChange]
   /// notification sent. If the Z-Wave message failed to get through then
   /// the value will be reverted to its original state and another [onChange]
   /// notification will be sent.
@@ -465,4 +490,4 @@ abstract class ButtonValue extends Value {
 
 /// Abstract representation of a specific raw value.
 /// See [ValueType.RawType].
-abstract class RawValue extends Value {}
+abstract class RawValue extends Value<List<int>> {}

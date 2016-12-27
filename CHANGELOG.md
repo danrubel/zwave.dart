@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+* implement addDevice and removeDevice methods
+* implement RawValue
+* partially implement ScheduleValue
+* add ZWave.heal to update node routing tables
+* add Device.neighborIds indicating which other devices a device can directly communicate with
+
 ## 0.6.0
 * enhance ZWave.device to optionally set device name and configuration
 * add ZWave.pollInterval and Value.pollIntensity accessors

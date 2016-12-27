@@ -22,17 +22,22 @@ class MockZWave implements ZWave {
 
   @override
   Future connect(String port) async {
-    // TODO: implement connect
+    throw 'not implemented';
+  }
+
+  @override
+  void heal({int networkId}) {
+    throw 'not implemented';
   }
 
   @override
   Future update() async {
-    // TODO: implement update
+    throw 'not implemented';
   }
 
   @override
   Future allUpdated() async {
-    // TODO: implement allUpdated
+    throw 'not implemented';
   }
 
   @override
@@ -40,14 +45,24 @@ class MockZWave implements ZWave {
 
   @override
   Future dispose() async {
-    // TODO: implement dispose
+    throw 'not implemented';
   }
 
   @override
   void writeConfig() {
-    // TODO: implement writeConfig
+    throw 'not implemented';
   }
 
   @override
   String summary({bool allValues: false}) => 'mock';
+
+  @override
+  Future<int> removeDevice({int networkId}) {
+    throw 'not implemented';
+  }
+
+  @override
+  Future<Device> addDevice({int networkId}) {
+    throw 'not implemented';
+  }
 }
