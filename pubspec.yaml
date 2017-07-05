@@ -1,5 +1,5 @@
 name: zwave
-version: 0.7.0
+version: 0.8.0
 author: Dan Rubel <danrubel@google.com>
 description: >
   A Dart library for interacting with Z-Wave devices
@@ -8,7 +8,9 @@ homepage: https://github.com/danrubel/zwave.dart
 environment:
   sdk: '>=1.15.0 <2.0.0'
 dependencies:
+  args: '>=0.13.7 <1.1.0'
   logging: ^0.11.3
 dev_dependencies:
   grinder: ^0.8.0
+  mockito: ^2.0.2
   test: ^0.12.4

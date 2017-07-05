@@ -88,17 +88,48 @@ main(List<String> args) async {
     }
   });
 
-  test('value index', () {
+  test('device groups', () {
     for (Device device in zwave.devices) {
-      for (Value value in device.values) {
-        expect(value.index, greaterThan(-1));
+      print('  $device');
+      for (Group group in device.groups) {
+        List<int> associations = group.associations;
+        var label = group.label;
+        var description;
+        if (label.length > 20) {
+          description = label;
+          label = '';
+        }
+        print('    Group ${group.groupIndex} $label'
+            ' - $associations'
+            ' - ${group.maxAssociations} max');
+        if (description != null) print('      $description');
+        for (int nodeId in associations) {
+          try {
+            var neighbor = zwave.device(nodeId, networkId: device.networkId);
+            print('      $neighbor');
+          } catch (e) {
+            if (e is String && e.startsWith('Expected nodeId to be one of')) {
+              print('      Unknown node $nodeId');
+            } else {
+              print('      Unknown node $nodeId - $e');
+            }
+          }
+        }
       }
     }
   });
 
-  test('value polling', () {
+  test('device configuration', () {
+    for (Device device in zwave.devices) {
+      device.requestAllConfigParams();
+      break;
+    }
+  });
+
+  test('value', () {
     for (Device device in zwave.devices) {
       for (Value value in device.values) {
+        expect(value.index, greaterThan(-1));
         expect(value.pollIntensity, greaterThanOrEqualTo(0));
       }
     }

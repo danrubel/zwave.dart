@@ -77,6 +77,9 @@ abstract class ZWave {
   /// [Value] name or the [Value] index, while the [Value] current value is
   /// set to the corresponding map value. An exception is thrown if the [Value]
   /// cannot be found of the [Value] current value cannot be set.
+  ///
+  /// The [configuration] parameter is deprecated and will be removed
+  /// Use [Device.setConfigParam] instead.
   Device device(int nodeId, {int networkId, String name, Map configuration});
 
   /// Return a list of the known [Device]s
@@ -251,6 +254,10 @@ abstract class Device {
   /// this node can communicate.
   List<int> get neighborIds;
 
+  /// Return an array of array of nodeId representing the groups in which
+  /// the receiver participates as a sender.
+  List<Group> get groups;
+
   /// A broadcast stream of [Notification]s related to this device
   /// including [NodeEvents] and [SceneEvents].
   Stream<Notification> get onNotification;
@@ -266,6 +273,34 @@ abstract class Device {
   ///     }
   ///
   Future<bool> update();
+
+  /// Request the values of all known configurable parameters from a device.
+  void requestAllConfigParams();
+
+  /// Request the value of a configurable parameter from a device.
+  ///
+  /// This method does not wait for the the response from the device.
+  /// If the parameter index is valid for this device, and the device is awake,
+  /// then the corresponding device value will eventually be updated.
+  ///
+  /// [param] is the index of the parameter.
+  void requestConfigParam(int param);
+
+  /// Set the value of a configurable parameter.
+  ///
+  /// This method does not wait for the device to receive the message
+  /// or acknowledge that the configuration parameter was set.
+  ///
+  /// Some devices have various parameters that can be configured to control
+  /// the device behaviour. These are not reported by the device over
+  /// the Z-Wave network, but can usually be found in the device's user manual.
+  /// These parameters may show up in the device's [values] with a genre
+  /// of [ValueGenre.Config], but must be set using this method.
+  ///
+  /// [param] is the index of the parameter.
+  /// [value] is the value to which the parameter should be set.
+  /// [numBytes] is the number bytes to be sent for the paramter value (1 - 4).
+  void setConfigParam(int param, int value, int numBytes);
 
   /// Return the [Value] with the specified [label]. If the device has
   /// more than one value with the same label, then you can supply an [index]
@@ -294,6 +329,16 @@ abstract class Device {
         return v.label == label && (index == null || v.index == index);
       }, orElse: orElse);
     });
+  }
+
+  /// Return the [Value] with the specified [index].
+  /// Throw an exception if no [Value] is found.
+  Value valueByIndex(int index, {Value orElse()}) {
+    orElse ??= () {
+      var indices = values.map((v) => v.index).toList()..sort();
+      throw 'Expected index to be one of $indices';
+    };
+    return values.firstWhere((v) => v.index == index, orElse: orElse);
   }
 
   /// Return the [Value] with the specified [index].
@@ -359,6 +404,34 @@ abstract class Device {
     if (name == null || name.isEmpty) name = 'Device';
     return '$name(0x${networkId.toRadixString(16)}, $nodeId)';
   }
+}
+
+/// A group or an association is a collection of individual devices
+/// enabling them to communicate directly without the need for a central controller.
+abstract class Group {
+  /// The device sending the commands or events.
+  Device get device;
+
+  /// Return the label for this group.
+  String get label;
+
+  /// The index of this group, where the first group has index 1.
+  /// For example, if a device has 4 groups,
+  /// then the groups will have groupIndex values from 1 to 4.
+  int get groupIndex;
+
+  /// Return the maximum number of associations for this group.
+  int get maxAssociations;
+
+  /// A collection of nodeIds representing the nodes
+  /// to which [device] can send commands or events.
+  List<int> get associations;
+
+  /// Add the specified node to the group if not already in the group.
+  void addAssociation(int nodeId);
+
+  /// Remove the specified node from the group if it is in the group.
+  void removeAssociation(int nodeId);
 }
 
 /// A notification received from the [ZWave] manager.
@@ -445,6 +518,10 @@ abstract class Value<T> {
 
   /// A stream of state changes.
   Stream<T> get onChange;
+
+  /// The time at which the last change was received from the ZWave network
+  /// or `null` if no change has occurred since initialization.
+  DateTime get lastChangeTime;
 }
 
 /// Abstract representation of a specific [bool] value.

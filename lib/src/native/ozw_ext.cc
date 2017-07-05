@@ -617,6 +617,99 @@ void getNodeNeighbors(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Return the number of association groups reported by this node.
+// _getNumGroups(int networkId, int nodeId) native "getNumGroups";
+void getNumGroups(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+
+  uint8 numGroups = Manager::Get()->GetNumGroups(homeId, nodeId);
+
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(numGroups)));
+  Dart_ExitScope();
+}
+
+// Return a list of nodeIds representing the associated nodes in a group.
+// _getAssociations(int networkId, int nodeId, int groupIndex) native "getAssociations";
+void getAssociations(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 groupIndex = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+
+  uint8* associations;
+  uint32 numAssoc = Manager::Get()->GetAssociations(homeId, nodeId, groupIndex, &associations);
+
+  Dart_Handle list = HandleError(Dart_NewList(numAssoc));
+  if (numAssoc > 0) {
+    for (uint32 index = 0; index < numAssoc; ++index) {
+      uint8 nodeId = associations[index];
+      HandleError(Dart_ListSetAt(list, index, HandleError(Dart_NewInteger(nodeId))));
+    }
+    delete [] associations;
+  }
+
+  Dart_SetReturnValue(arguments, list);
+  Dart_ExitScope();
+}
+
+// Return the maximum number of associations for a group.
+// _getMaxAssociations(int networkId, int nodeId, int groupIndex) native "getMaxAssociations";
+void getMaxAssociations(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 groupIndex = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+
+  uint8 maxAssoc = Manager::Get()->GetMaxAssociations(homeId, nodeId, groupIndex);
+
+  Dart_SetReturnValue(arguments, HandleError(Dart_NewInteger(maxAssoc)));
+  Dart_ExitScope();
+}
+
+// Adds a node to an association group.
+// _addAssociation(int networkId, int nodeId, int groupIndex, int nodeIdToAdd) native "addAssociation";
+void addAssociation(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 groupIndex = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  uint8 nodeIdToAdd = HandleToInt(Dart_GetNativeArgument(arguments, 4));
+
+  Manager::Get()->AddAssociation(homeId, nodeId, groupIndex, nodeIdToAdd);
+
+  Dart_ExitScope();
+}
+
+// Removes a node from an association group.
+// _removeAssociation(int networkId, int nodeId, int groupIndex, int nodeIdToRemove) native "removeAssociation";
+void removeAssociation(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 groupIndex = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  uint8 nodeIdToRemove = HandleToInt(Dart_GetNativeArgument(arguments, 4));
+
+  Manager::Get()->RemoveAssociation(homeId, nodeId, groupIndex, nodeIdToRemove);
+
+  Dart_ExitScope();
+}
+
+// Returns a label for the particular group of a node.
+// _getGroupLabel(int networkId, int nodeId, int groupIndex) native "getGroupLabel";
+void getGroupLabel(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 groupIndex = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+
+  string text = Manager::Get()->GetGroupLabel(homeId, nodeId, groupIndex);
+
+  Dart_SetReturnValue(arguments, StringToHandle(text));
+  Dart_ExitScope();
+}
+
 // Return a ValidID for arguments 1 (homeId) and 2 (valueId).
 // The returned object *must* be deleted after use.
 ValueID* ArgsToNewValueID(Dart_NativeArguments arguments) {
@@ -962,6 +1055,46 @@ void refreshNodeInfo(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
+// Request the values of all known configurable parameters from a device.
+// _requestAllConfigParams(int networkId, int nodeId) native "requestAllConfigParams";
+void requestAllConfigParams(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+
+  Manager::Get()->RequestAllConfigParams(homeId, nodeId);
+
+  Dart_ExitScope();
+}
+
+// Request the value of a configurable parameter from a device.
+// _requestConfigParam(int networkId, int nodeId, int param) native "requestConfigParam";
+void requestConfigParam(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 param = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+
+  Manager::Get()->RequestConfigParam(homeId, nodeId, param);
+
+  Dart_ExitScope();
+}
+
+// Set the value of a configurable parameter in a device.
+// _setConfigParam(int networkId, int nodeId, int param, int value, int numBytes) native "setConfigParam";
+void setConfigParam(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+  uint32 homeId = HandleToInt(Dart_GetNativeArgument(arguments, 1));
+  uint8 nodeId = HandleToInt(Dart_GetNativeArgument(arguments, 2));
+  uint8 param = HandleToInt(Dart_GetNativeArgument(arguments, 3));
+  int32 value = HandleToInt(Dart_GetNativeArgument(arguments, 4));
+  uint8 numBytes = HandleToInt(Dart_GetNativeArgument(arguments, 5));
+
+  Manager::Get()->SetConfigParam(homeId, nodeId, param, value, numBytes);
+
+  Dart_ExitScope();
+}
+
 // Return the OpenZWave Version
 // String version() native "version";
 void version(Dart_NativeArguments arguments) {
@@ -988,9 +1121,13 @@ struct FunctionLookup {
 };
 
 FunctionLookup function_list[] = {
+  {"addAssociation", addAssociation},
   {"addNode", addNode},
   {"connect", connect},
   {"destroy", destroy},
+  {"getAssociations", getAssociations},
+  {"getGroupLabel", getGroupLabel},
+  {"getMaxAssociations", getMaxAssociations},
   {"getNodeBasic", getNodeBasic},
   {"getNodeGeneric", getNodeGeneric},
   {"getNodeSpecific", getNodeSpecific},
@@ -1002,6 +1139,7 @@ FunctionLookup function_list[] = {
   {"getNodeProductId", getNodeProductId},
   {"getNodeProductName", getNodeProductName},
   {"getNodeProductType", getNodeProductType},
+  {"getNumGroups", getNumGroups},
   {"getValueAsBool", getValueAsBool},
   {"getValueAsByte", getValueAsByte},
   {"getValueAsFloat", getValueAsFloat},
@@ -1025,9 +1163,13 @@ FunctionLookup function_list[] = {
   {"pollIntensity", pollIntensity},
   {"pollInterval", pollInterval},
   {"refreshNodeInfo", refreshNodeInfo},
+  {"removeAssociation", removeAssociation},
   {"removeNode", removeNode},
+  {"requestAllConfigParams", requestAllConfigParams},
+  {"requestConfigParam", requestConfigParam},
   {"setBoolValue", setBoolValue},
   {"setByteValue", setByteValue},
+  {"setConfigParam", setConfigParam},
   {"setIntValue", setIntValue},
   {"setListSelectionValue", setListSelectionValue},
   {"setNodeName", setNodeName},

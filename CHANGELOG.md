@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0
+* add node group/association accessor, add node, remove node
+* add Device.requestAllConfigParams, Device.get/setConfigParam
+* use Device.setConfigParam
+    instead of the ZWave.device "configuration" parameter
+* track last time that each value changes
+* add orElse named argument to Device.valueByIndex
+* add zwave command line application 
+  for querying and updating the ZWave devices
+
 ## 0.7.0
 * implement addDevice and removeDevice methods
 * implement RawValue

@@ -308,6 +308,7 @@ class OZW extends ZWave {
             int valueId = message[3];
             _OZWValue value = device.values.firstWhere((v) => v.id == valueId);
             if (value is _OZWValue) {
+              value._lastChangeTime = new DateTime.now();
               value._changeController?.add(value.current);
               return;
             }
@@ -381,6 +382,18 @@ class OZW extends ZWave {
 
   _getNodeNeighbors(int networkId, int nodeId) native "getNodeNeighbors";
 
+  _getNumGroups(int networkId, int nodeId) native "getNumGroups";
+  _getGroupLabel(int networkId, int nodeId, int groupIndex)
+      native "getGroupLabel";
+  _getAssociations(int networkId, int nodeId, int groupIndex)
+      native "getAssociations";
+  _getMaxAssociations(int networkId, int nodeId, int groupIndex)
+      native "getMaxAssociations";
+  _addAssociation(int networkId, int nodeId, int groupIndex, int nodeIdToAdd)
+      native "addAssociation";
+  _removeAssociation(int networkId, int nodeId, int groupIndex,
+      int nodeIdToRemove) native "removeAssociation";
+
   _getValueAsBool(int networkId, int valueId) native "getValueAsBool";
   _getValueAsByte(int networkId, int valueId) native "getValueAsByte";
   _getValueAsFloat(int networkId, int valueId) native "getValueAsFloat";
@@ -422,6 +435,12 @@ class OZW extends ZWave {
   _setShortValue(int networkId, int id, int newValue) native "setShortValue";
 
   _refreshNodeInfo(int networkId, int nodeId) native "refreshNodeInfo";
+  _requestAllConfigParams(int networkId, int nodeId)
+      native "requestAllConfigParams";
+  _requestConfigParam(int networkId, int nodeId, int param)
+      native "requestConfigParam";
+  _setConfigParam(int networkId, int nodeId, int param, int value, int numBytes)
+      native "setConfigParam";
 
   _writeConfig(int networkId) native "writeConfig";
 }
@@ -429,6 +448,7 @@ class OZW extends ZWave {
 class _OZWDevice extends Device {
   final OZW zwave;
   final Map<int, _OZWValue> _valueMap = <int, _OZWValue>{};
+  List<Group> _groups;
   StreamController<Notification> _notificationController;
 
   _OZWDevice(this.zwave, int networkId, int nodeId) : super(networkId, nodeId);
@@ -472,6 +492,21 @@ class _OZWDevice extends Device {
   List<int> get neighborIds => zwave._getNodeNeighbors(networkId, nodeId);
 
   @override
+  List<Group> get groups {
+    if (_groups != null) return _groups;
+    int numGroups = zwave._getNumGroups(networkId, nodeId);
+    // In Z-Wave, groups are numbered starting from one.
+    // For example, if a call to GetNumGroups returns 4, the group-index
+    // value to use in calls to GetAssociations, AddAssociation and RemoveAssociation
+    // will be a number between 1 and 4.
+    _groups = <_OZWGroup>[];
+    for (int groupIndex = 1; groupIndex <= numGroups; ++groupIndex) {
+      _groups.add(new _OZWGroup(this, groupIndex));
+    }
+    return _groups;
+  }
+
+  @override
   List<Value> get values => new List.from(_valueMap.values);
 
   @override
@@ -486,12 +521,76 @@ class _OZWDevice extends Device {
     // to determine if the node's data was refreshed.
     return zwave._refreshNodeInfo(networkId, nodeId);
   }
+
+  @override
+  void requestAllConfigParams() {
+    // TODO Return a future that completes when all configuration parameters
+    // have been received.
+    zwave._requestAllConfigParams(networkId, nodeId);
+  }
+
+  @override
+  void requestConfigParam(int param) {
+    zwave._requestConfigParam(networkId, nodeId, param);
+  }
+
+  @override
+  void setConfigParam(int param, int value, int numBytes) {
+    zwave._setConfigParam(networkId, nodeId, param, value, numBytes);
+  }
+}
+
+class _OZWGroup implements Group {
+  @override
+  final _OZWDevice device;
+
+  @override
+  String get label =>
+      device.zwave._getGroupLabel(device.networkId, device.nodeId, groupIndex);
+
+  @override
+  final int groupIndex;
+
+  /// A cached list of nodeIds or `null` if not cached
+  List<int> _associations;
+
+  _OZWGroup(this.device, this.groupIndex);
+
+  @override
+  int get maxAssociations => device.zwave
+      ._getMaxAssociations(device.networkId, device.nodeId, groupIndex);
+
+  @override
+  List<int> get associations {
+    _associations ??= new List.unmodifiable(device.zwave
+        ._getAssociations(device.networkId, device.nodeId, groupIndex));
+    return _associations;
+  }
+
+  @override
+  void addAssociation(int nodeId) {
+    if (!associations.contains(nodeId)) {
+      device.zwave
+          ._addAssociation(device.networkId, device.nodeId, groupIndex, nodeId);
+      _associations = null;
+    }
+  }
+
+  @override
+  void removeAssociation(int nodeId) {
+    if (associations.contains(nodeId)) {
+      device.zwave._removeAssociation(
+          device.networkId, device.nodeId, groupIndex, nodeId);
+      _associations = null;
+    }
+  }
 }
 
 class _OZWValue<T> implements Value<T> {
   final _OZWDevice device;
   final int id;
   StreamController<T> _changeController;
+  DateTime _lastChangeTime;
 
   _OZWValue(this.device, this.id);
 
@@ -528,6 +627,9 @@ class _OZWValue<T> implements Value<T> {
     _changeController ??= new StreamController<T>.broadcast();
     return _changeController.stream;
   }
+
+  @override
+  DateTime get lastChangeTime => _lastChangeTime;
 
   @override
   int get pollIntensity => device.zwave._pollIntensity(device.networkId, id);
