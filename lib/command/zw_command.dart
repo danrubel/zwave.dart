@@ -1,148 +1,83 @@
 import 'dart:async';
 
-import 'dart:io';
-import 'package:args/command_runner.dart';
-import 'package:zwave/command/util.dart';
-import 'package:zwave/zwave.dart';
+import 'package:logging/logging.dart';
+import 'package:zwave/handler/command_handler.dart';
+import 'package:zwave/message_consts.dart';
+import 'package:zwave/src/zw_decoder.dart';
+import 'package:zwave/zw_message.dart';
 
-/// `ZWCommand` provides common behavior for all of the ZW commands.
-abstract class ZWCommand extends Command<String> {
-  final ZWave zwave;
-  final String name;
-  final String description;
-  final String argumentDescription;
-  final List<String> aliases;
-  final bool takesArguments;
-  final ProgressHandler progressHandler;
+abstract class ZwCommand<T> extends ZwMessage {
+  Logger logger;
 
-  ZWCommand(
-    this.zwave,
-    this.name, {
-    this.description,
-    this.argumentDescription = '',
-    this.aliases: const [],
-    this.takesArguments: true,
-    this.progressHandler,
-  });
+  Completer<List<int>> _responseCompleter;
 
-  @override
-  String get invocation =>
-      super.invocation.replaceAll('[arguments]', argumentDescription);
-
-  List<Device> get devicesSortedById {
-    var sorted = zwave.devices
-      ..sort((d1, d2) {
-        return d1.networkId != d2.networkId
-            ? d1.networkId - d2.networkId
-            : d1.nodeId - d2.nodeId;
-      });
-    return sorted;
+  ZwCommand() {
+    logger = new Logger('$runtimeType');
   }
 
-  bool get hasMultipleNetworks {
-    var devices = zwave.devices;
-    if (devices.isEmpty) return false;
-    var networkId = devices[0].networkId;
-    for (Device d in devices) {
-      if (networkId != d.networkId) return true;
-    }
-    return false;
-  }
+  /// Return the complete message to be sent out on the Z-Wave network
+  List<int> get data {
+    final data = <int>[
+      SOF, // start of frame
+      3, // length
+      REQ_TYPE, // request
+      functId,
+    ];
 
-  @override
-  String get usage {
-    String text = super.usage;
-    if (aliases.isEmpty) return text;
-    int index = text.indexOf('Usage: ');
-    while (text[index] != '\r' && text[index] != '\n') ++index;
-    var buf = new StringBuffer(text.substring(0, index));
-    buf.writeln();
-    if (aliases.length == 1) {
-      buf.write('Alias: ');
-    } else {
-      buf.write('Aliases: ');
-    }
-    buf.write(aliases.join(', '));
-    buf.write(text.substring(index));
-    return buf.toString();
-  }
-
-  /// Search for and return a matching device.
-  /// If one cannot be found, then append error information to `buf`
-  /// and return `null`.
-  Device findDevice(StringBuffer buf, String networkArg, String nodeArg) {
-    int networkId = parseInt(networkArg);
-    int nodeId = parseInt(nodeArg);
-    if (networkId == -1) {
-      invalidArgument(buf, 'network id', networkArg);
-      return null;
-    }
-    if (nodeId == -1) {
-      invalidArgument(buf, 'node id', nodeArg);
-      return null;
+    // Add function parameters if there are any
+    List<int> param = functParam;
+    if (param != null) {
+      data.addAll(param);
+      data[1] = data.length - 1; // update length field
     }
 
-    Device device = zwave.devices.firstWhere((device) {
-      return device.nodeId == nodeId &&
-          (networkId == null || device.networkId == networkId);
-    }, orElse: () => null);
-    if (device == null) {
-      buf.write('Device $nodeId');
-      if (networkId != null)
-        buf.write(' in network 0x${networkId.toRadixString(16)}');
-      buf.writeln(' not found');
-      buf.writeln();
-      buf.writeln(usage);
-    }
-    return device;
+    // Calculate and append checksum
+    int crc = 0xFF;
+    for (int index = 1; index < data.length; ++index) crc ^= data[index];
+    data.add(crc);
+
+    return data;
   }
 
-  /// Display progress information to the user.
-  void progress(String message) {
-    if (progressHandler != null) {
-      progressHandler(message);
-    } else {
-      stdout
-        ..writeln(message)
-        ..flush();
-    }
+  int get functId;
+
+  List<int> get functParam;
+
+  Completer<List<int>> get responseCompleter => _responseCompleter;
+
+  Duration get responseTimeout => const Duration(seconds: 5);
+
+  T processResponse(List<int> response);
+
+  /// Send the command and return a future that completes with the result
+  Future<T> send(CommandHandler handler) async {
+    if (_responseCompleter != null) throw 'already called send';
+    _responseCompleter = new Completer<List<int>>();
+    Future<T> result = _responseCompleter.future.then(processResponse);
+    await handler.send(this);
+    return result;
   }
 
-  @override
-  Future<String> run() async {
-    var buf = new StringBuffer();
-    await runWith(buf);
-    return buf.toString();
-  }
+  /// Return `true` if the given response indicates that the device will send
+  /// the requested information in a separate unsolicited request/notification.
+  bool willCallback(List<int> data) {
+    /*
+    Check for a response such as
 
-  /// Subclasses override this method to perform the operation.
-  runWith(StringBuffer buf);
+     0x01, // SOF
+     0x04, // length excluding SOF and checksum
+     0x01, // response
+     0x13, // FUNC_ID_ZW_SEND_DATA
 
-  bool checkNoMoreArgs(StringBuffer buf) {
-    if (argResults.rest.isEmpty) return true;
-    unknownArguments(buf);
-    return false;
-  }
+     0x00 or 0x01 // source node ???
 
-  void invalidArgument(StringBuffer buf, String argName, String arg) {
-    buf.writeln('Invalid <$argName>: $arg');
-    buf.writeln();
-    buf.writeln(usage);
-  }
+     0xE8, // checksum
 
-  void missingArgument(StringBuffer buf, String argName) {
-    buf.writeln('Please specify <$argName>');
-    buf.writeln();
-    buf.writeln(usage);
-  }
-
-  void unknownArguments(StringBuffer buf, [List<String> args]) {
-    args ??= argResults.rest;
-    buf.write('Unknown argument');
-    if (args.length > 1) buf.write('s');
-    buf.write(': ');
-    buf.writeln(args.join(' '));
-    buf.writeln();
-    buf.writeln(usage);
+    indicating that the device will be sent an unsolicited request/notification
+    with additional information for the command just processed.
+   */
+    return data.length == 6 &&
+        data[3] == FUNC_ID_ZW_SEND_DATA &&
+        (data[4] == 0x00 || data[4] == 0x01);
   }
 }

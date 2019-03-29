@@ -1,4 +1,5 @@
 .atom
+.dart_tool
 .DS_Store
 .idea
 .packages
@@ -6,9 +7,9 @@
 .project
 .settings
 
-OZW_Log.txt
+*.o
+*.so
+
 packages
 pubspec.lock
 zwave.iml
-
-doc/

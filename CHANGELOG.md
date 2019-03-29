@@ -1,6 +1,12 @@
 # Changelog
 
+## 0.9.0-dev.1
+* Overhaul for Dart2
+* Rewrote native to remove dependency on Open ZWave binary
+* Restructured to allow composing nodes based on capability
+
 ## 0.8.0
+* last Dart 1 compatible version
 * add node group/association accessor, add node, remove node
 * add Device.requestAllConfigParams, Device.get/setConfigParam
 * use Device.setConfigParam
