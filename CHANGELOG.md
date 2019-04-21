@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.0-dev.1
+## 0.9.0
 * Overhaul for Dart2
 * Rewrote native to remove dependency on Open ZWave binary
 * Restructured to allow composing nodes based on capability

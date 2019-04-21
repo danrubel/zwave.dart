@@ -1,5 +1,5 @@
 name: zwave
-version: 0.9.0-dev.1
+version: 0.9.0
 author: Dan Rubel <danrubel@google.com>
 description: >
   A Dart Library for interacting with Z-Wave devices on Linux.
