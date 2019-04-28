@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:logging/logging.dart';
 import 'package:zwave/message_consts.dart';
@@ -106,3 +107,10 @@ List<int> buildSendDataRequest(int nodeId, List<int> cmdData,
 
   return buildFunctRequest(FUNC_ID_ZW_SEND_DATA, functParam);
 }
+
+int get nextSequenceNumber {
+  ++_sequenceNumber;
+  if (_sequenceNumber > 0xFF) _sequenceNumber = 0;
+  return _sequenceNumber;
+}
+int _sequenceNumber = Random().nextInt(256);

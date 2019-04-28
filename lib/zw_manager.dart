@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:logging/logging.dart';
+import 'package:zwave/capability/network_management_proxy.dart';
 import 'package:zwave/command/zw_command.dart';
 import 'package:zwave/command/zw_request.dart';
 import 'package:zwave/handler/command_handler.dart';
@@ -17,7 +18,8 @@ import 'package:zwave/zw_exception.dart';
 /// devices are forwarded to the corresponding [ZwNode].
 /// Messages destine for physical devices are queue and sent sequentially.
 class ZwManager extends MessageDispatcher<void> implements CommandHandler {
-  final Logger logger = new Logger('ZwManager');
+  final logger = new Logger('ZwManager');
+  final controller = new PrimaryController();
   final ZwDriver driver;
   final int retryDelayMsForTesting;
 
@@ -27,6 +29,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   ZwManager(this.driver, {this.retryDelayMsForTesting}) {
     driver.requestHandler = dispatch;
     initHandlers();
+    add(controller);
   }
 
   Future<ApiLibraryVersion> apiLibraryVersion() => request(new ZwRequest(
@@ -243,6 +246,10 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
       _resultTimer = null;
     }
   }
+}
+
+class PrimaryController extends ZwNode with NetworkManagementProxy {
+  PrimaryController() : super(1);
 }
 
 class _RequestTask extends _Task {
