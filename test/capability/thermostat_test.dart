@@ -5,7 +5,7 @@ import 'package:zwave/node/zw_node.dart';
 import '../zw_request_test.dart';
 
 main() {
-  new ThermostatTest().init();
+  ThermostatTest().init();
 }
 
 class ThermostatTest extends ZwRequestTest {
@@ -14,7 +14,7 @@ class ThermostatTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new ThermostatNode(13);
+      node = ThermostatNode(13);
       manager.add(node);
     });
 

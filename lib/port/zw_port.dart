@@ -19,45 +19,33 @@ abstract class ZwPort {
   StreamSubscription _notificationSubscription;
 
   ZwPort() {
-    driver = new ZwDriver(_sendData);
-    _decoder = new ZwDecoder(driver);
+    driver = ZwDriver(write);
+    _decoder = ZwDecoder(driver);
   }
-
-  /// Returns the last error if one occurred during a native call.
-  int get lastError;
 
   /// Open the ZWave serial port on [portPath]
   /// where [portPath] defaults to [defaultPortPath] if unspecified.
   Future<void> open(String portPath) async {
     if (notificationPort != null) _error('already open');
     if (portPath == null) _error('invalid port path');
-    notificationPort = new ReceivePort();
-    _notificationSubscription = notificationPort.listen(_decoder.process);
-    int result = openPort(portPath);
-    if (result != 0) _error('open failed: $result', error: lastError);
+    notificationPort = ReceivePort();
+    _notificationSubscription = notificationPort.listen(process);
+    await openPort(portPath);
     _logger.config('opened $portPath');
 
     // Initialize the connection
-    if (!driver.sendNak()) throw const ZwException('initialization failed');
+    driver.sendNak();
     // TODO Consider sending FUNC_ID_SERIAL_API_SOFT_RESET and waiting 1 1/2 sec
   }
 
+  void process(dynamic data) => _decoder.process(data);
+
   /// Low level method for opening the Z-Wave port.
   /// Clients should call [open] which calls this method.
-  int openPort(String portPath);
-
-  /// Send the specified data and return `true` if successful
-  bool _sendData(List<int> data, String name) {
-    int result = write(data);
-    if (result == data.length) return true;
-
-    _logger.warning('==> $name failed $result,'
-        ' error: ${lastError}, data: $data');
-    return false;
-  }
+  Future<void> openPort(String portPath);
 
   /// Send raw data over the port to the Z-Wave controller.
-  int write(List<int> data);
+  void write(List<int> data);
 
   Future<void> close() async {
     if (notificationPort == null) return;
@@ -66,23 +54,20 @@ abstract class ZwPort {
     notificationPort?.close();
     notificationPort = null;
     _decoder.clear();
-
-    int result = closePort();
-
-    if (result != 0) _error('close failed: $result', error: lastError);
+    await closePort();
     _logger.config('closed');
   }
 
   /// Low level method for closing the Z-Wave port.
   /// Clients should call [close] which calls this method.
-  int closePort();
+  Future<void> closePort();
 }
 
-final Logger _logger = new Logger('ZwPort');
+final Logger _logger = Logger('ZwPort');
 
 void _error(String message, {int error}) {
-  final buf = new StringBuffer(message);
+  final buf = StringBuffer(message);
   if (error != null) buf.write(', error: $error');
   _logger.warning(buf.toString());
-  throw new ZwException(message);
+  throw ZwException(message);
 }

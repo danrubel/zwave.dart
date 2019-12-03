@@ -9,7 +9,7 @@ main() {
   test('report', () {
     final node = TestElectrical(11);
     expect(node.energy, isNull);
-    node.handleElectricalMeterReport(new MeterReport(electricalReportData));
+    node.handleElectricalMeterReport(MeterReport(electricalReportData));
     expect(node.energy, 3244.132);
   });
 }

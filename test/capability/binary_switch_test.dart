@@ -6,7 +6,7 @@ import 'package:zwave/node/zw_node.dart';
 import '../zw_request_test.dart';
 
 void main() {
-  new BinarySwitchTest().init();
+  BinarySwitchTest().init();
 }
 
 class BinarySwitchTest extends ZwRequestTest {
@@ -15,7 +15,7 @@ class BinarySwitchTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new TestBinarySwitchNode(9);
+      node = TestBinarySwitchNode(9);
       manager.add(node);
     });
 
@@ -118,7 +118,7 @@ const binarySwitchSetFalseRequest = [
   0x25, // transmit options
   238, // checksum
 ];
-const response = const <int>[
+const response = <int>[
   0x01, // SOF
   0x09, // length excluding SOF and checksum
   0x01, // response

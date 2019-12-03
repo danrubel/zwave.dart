@@ -2,6 +2,7 @@ import 'package:zwave/message_consts.dart';
 import 'package:zwave/report/basic_report.dart';
 import 'package:zwave/report/meter_report.dart';
 import 'package:zwave/report/scene_activation_set.dart';
+import 'package:zwave/report/security_message_encapsulation.dart';
 import 'package:zwave/report/sensor_multilevel_report.dart';
 import 'package:zwave/report/zw_command_class_report.dart';
 import 'package:zwave/src/application_command_handler_base.g.dart';
@@ -28,7 +29,7 @@ abstract class ApplicationCommandHandler<T>
   T handleCommandClassBasic(List<int> data) {
     switch (data[8]) {
       case BASIC_SET:
-        return handleBasicSet(new BasicReport(data));
+        return handleBasicSet(BasicReport(data));
       default:
         return super.handleCommandClassBasic(data);
     }
@@ -42,7 +43,7 @@ abstract class ApplicationCommandHandler<T>
   T handleCommandClassSceneActivation(List<int> data) {
     switch (data[8]) {
       case SCENE_ACTIVATION_SET:
-        return handleSceneActivationSet(new SceneActivationSet(data));
+        return handleSceneActivationSet(SceneActivationSet(data));
       default:
         return super.handleCommandClassSceneActivation(data);
     }
@@ -50,6 +51,39 @@ abstract class ApplicationCommandHandler<T>
 
   T handleSceneActivationSet(SceneActivationSet scene) {
     return unhandledReport('SceneActivationSet', scene);
+  }
+
+  T handleCommandClassSecurity(List<int> data) {
+    switch (data[8]) {
+      case SECURITY_NONCE_GET:
+        return handleSecurityNonceGet(ZwCommandClassReport(data));
+      case SECURITY_MESSAGE_ENCAPSULATION:
+        return handleSecurityMessageEncapsulation(
+            SecurityMessageEncapsulation(data));
+      case SECURITY_MESSAGE_ENCAPSULATION_NONCE_GET:
+        return handleSecurityMessageEncapsulationNonceGet(
+            SecurityMessageEncapsulation(data));
+      default:
+        return super.handleCommandClassSecurity(data);
+    }
+  }
+
+  T handleSecurityNonceGet(ZwCommandClassReport report) {
+    logger.warning('Unhandled SecurityNonceGet from ${report.sourceNode}');
+    return null;
+  }
+
+  T handleSecurityMessageEncapsulation(SecurityMessageEncapsulation message) {
+    logger.warning(
+        'Unhandled SecurityMessageEncapsulation from ${message.sourceNode}');
+    return null;
+  }
+
+  T handleSecurityMessageEncapsulationNonceGet(
+      SecurityMessageEncapsulation message) {
+    logger.warning(
+        'Unhandled SecurityMessageEncapsulationNonceGet from ${message.sourceNode}');
+    return null;
   }
 
   T handleMeterReport(MeterReport report) {
@@ -90,7 +124,7 @@ abstract class ApplicationCommandHandler<T>
   T handleCommandClassWakeUp(List<int> data) {
     switch (data[8]) {
       case WAKE_UP_NOTIFICATION:
-        return handleWakeUpNotification(new ZwCommandClassReport(data));
+        return handleWakeUpNotification(ZwCommandClassReport(data));
       default:
         return super.handleCommandClassWakeUp(data);
     }

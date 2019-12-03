@@ -26,105 +26,29 @@ Dart_Handle HandleError(Dart_Handle handle) {
   return handle;
 }
 
-// The serial port file descriptor
-// or -1 if the serial port has been closed.
-static volatile int tty_fd = -1;
-
-// The port to which data from the network is posted
-// or -1 if openPort has not yet been called.
-static Dart_Port notificationPort = -1;
-
 // The errno from the last zwave call
 static volatile int64_t lastErrno = 0;
 
-// The id of the read thread so that it can be stopped
-// if necessary by the close function.
-pthread_t readThreadId;
-
-// The current state of the read thread:
-static const int readState_notStarted = 0;
-static const int readState_running = 1;
-static const int readState_requestStop = 2;
-static const int readState_stopped = 3;
-static volatile int readState = readState_notStarted;
-
-// Background thread for reading the serial port.
-void *readSerialPort(void *vargp) {
-
-  // Detach this thread from the main thread
-  pthread_detach(pthread_self());
-
-  readState = readState_running;
-
-  uint8_t values[256];
-  int numRead;
-
-  // Read and forward any messages from the port
-  while (readState != readState_requestStop) {
-    numRead = read(tty_fd, &values, sizeof(values));
-    Dart_CObject message;
-    if (numRead > 1) {
-      message.type = Dart_CObject_kTypedData;
-      message.value.as_typed_data.type = Dart_TypedData_kUint8;
-      message.value.as_typed_data.length = numRead;
-      message.value.as_typed_data.values = values;
-      Dart_PostCObject(notificationPort, &message);
-    } else if (numRead == 1) {
-      message.type = Dart_CObject_kInt32;
-      message.value.as_int32 = values[0];
-      Dart_PostCObject(notificationPort, &message);
-    } else {
-      if (numRead < 0) {
-        message.type = Dart_CObject_kInt32;
-        message.value.as_int32 = numRead;
-        Dart_PostCObject(notificationPort, &message);
-        message.value.as_int32 = errno;
-        Dart_PostCObject(notificationPort, &message);
-      }
-
-      pollfd fds = { .fd = tty_fd, .events = POLLIN | POLLPRI | POLLRDHUP };
-      poll(&fds, 1, 100); // 100 ms timeout
-    }
-  }
-
-  // Signal that the read thread is exiting
-  readState = readState_stopped;
-
-  pthread_exit(NULL);
-}
-
-// Open the zwave port and return zero if successful.
-// Negative return values indicate an error.
-// int _openPort(String portPath, SendPort sendPort) native "openPort";
+// Open the zwave port on the specified port path.
+// Return the file descriptor or a negative value indicating an error.
+// int _openPort(String portPath) native "openPort";
 void openPort(Dart_NativeArguments arguments) {
   Dart_EnterScope();
-
-  if (notificationPort != -1) {
-    HandleError(Dart_NewApiError("port already open"));
-  }
 
   const char* portPath;
   Dart_Handle dartString = HandleError(Dart_GetNativeArgument(arguments, 1));
   HandleError(Dart_StringToCString(dartString, &portPath));
 
-  Dart_Handle notificationObj = HandleError(Dart_GetNativeArgument(arguments, 2));
-  HandleError(Dart_SendPortGetId(notificationObj, &notificationPort));
-
-  int64_t result = 0;
-
   //tty_fd = open(portPath, O_RDWR | O_NOCTTY | O_NONBLOCK); // NetBSD ??
-  tty_fd = open(portPath, O_RDWR | O_NOCTTY, 0);
-  if (tty_fd <= 0) {
-    result = tty_fd;
-  }
-
-  if (result == 0) {
+  int tty_fd = open(portPath, O_RDWR | O_NOCTTY, 0);
+  if (tty_fd > 0) {
     if (flock(tty_fd, LOCK_EX | LOCK_NB) == -1) {
-      result = -33;
+      close(tty_fd);
+      tty_fd = -33;
     }
   }
 
-  if (result == 0) {
+  if (tty_fd > 0) {
     int bits;
     bits = 0;
     ioctl(tty_fd, TIOCMSET, &bits);
@@ -173,43 +97,73 @@ void openPort(Dart_NativeArguments arguments) {
     tio.c_cc[VTIME] = 1;
 
     if (tcsetattr(tty_fd, TCSANOW, &tio) == -1) {
-      result = -34;
+      close(tty_fd);
+      tty_fd = -34;
     }
   }
 
-  if (result == 0) {
+  if (tty_fd > 0) {
     tcflush(tty_fd, TCIOFLUSH);
-
-    // Start a background thread for reading from the serial port
-    result = pthread_create(&readThreadId, NULL, readSerialPort, NULL);
-  }
-
-  if (result == 0) {
     lastErrno = 0;
   } else {
     // Record the error if a step failed
     lastErrno = errno;
-    if (tty_fd > 0) {
-      // On fail, close the port if it was opened
-      close(tty_fd);
-      // TODO change so that tty_fd == 0 indicates closed
-      tty_fd = -1;
-    }
   }
 
-  Dart_SetIntegerReturnValue(arguments, result);
+  Dart_SetIntegerReturnValue(arguments, tty_fd);
   Dart_ExitScope();
 }
 
-// Send the specified message bytes.
-// Return the number of bytes sent, or a
-// negative return value indicating an error.
-// int _write(List<int> bytes) native "write";
+// Read message bytes from the given tty file descriptor.
+// Return an int if a single byte was read,
+// a list of bytes if multiple bytes were read,
+// null if there were no bytes available to be read,
+// or a negative return value indicating an error.
+// dynamic _read(int ttyFd) native "read";
+void read(Dart_NativeArguments arguments) {
+  Dart_EnterScope();
+
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t arg1Int;
+  HandleError(Dart_IntegerToInt64(arg1, &arg1Int));
+  int tty_fd = arg1Int;
+
+  uint8_t values[256];
+  intptr_t numRead = read(tty_fd, &values, sizeof(values));
+
+  if (numRead > 1) {
+    Dart_Handle data = HandleError(Dart_NewListOf(Dart_CoreType_Int, numRead));
+    for (int index = 0; index < numRead; ++index) {
+      Dart_Handle value = HandleError(Dart_NewInteger(values[index]));
+      HandleError(Dart_ListSetAt(data, index, value));
+    }
+    Dart_SetReturnValue(arguments, data);
+  } else if (numRead == 1) {
+    Dart_SetIntegerReturnValue(arguments, values[0]);
+  } else if (numRead == 0) {
+    Dart_SetReturnValue(arguments, Dart_Null());
+  } else {
+    // return the error code
+    lastErrno = errno;
+    Dart_SetIntegerReturnValue(arguments, numRead);
+  }
+
+  Dart_ExitScope();
+}
+
+// Send the specified message bytes to the given tty file descriptor.
+// Return the number of bytes sent, or a negative return value indicating an error.
+// int _write(int ttyFd, List<int> bytes) native "write";
 void write(Dart_NativeArguments arguments) {
   Dart_EnterScope();
 
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t arg1Int;
+  HandleError(Dart_IntegerToInt64(arg1, &arg1Int));
+  int tty_fd = arg1Int;
+
   intptr_t bytesLen;
-  Dart_Handle bytesObj = HandleError(Dart_GetNativeArgument(arguments, 1));
+  Dart_Handle bytesObj = HandleError(Dart_GetNativeArgument(arguments, 2));
   HandleError(Dart_ListLength(bytesObj, &bytesLen));
 
   int64_t result = 0;
@@ -219,8 +173,6 @@ void write(Dart_NativeArguments arguments) {
     result == -36;
   } else if (bytesLen > 255) {
     result == -37;
-  } else if (notificationPort == -1) {
-    result = -38;
   } else {
     const int bufferLen = 5;
     uint8_t buffer[bufferLen];
@@ -260,39 +212,20 @@ void write(Dart_NativeArguments arguments) {
   Dart_ExitScope();
 }
 
-// Close the zwave port and return zero if successful.
-// Negative return values indicate an error.
-// int _closePort() native "closePort";
+// Close the zwave port.
+// Return zero if successful or a negative value indicating an error.
+// int _closePort(int ttyFd) native "closePort";
 void closePort(Dart_NativeArguments arguments) {
   Dart_EnterScope();
 
-  int64_t result = 0;
-  lastErrno = 0;
-
-  // Signal the read thread to stop
-  readState = readState_requestStop;
-
-  // Wait for the read thread to stop
-  int waitCount = 1000;
-  while (readState != readState_stopped && waitCount > 0) {
-    timespec ts = { .tv_sec = 0, .tv_nsec = 1000000 }; // 1 ms
-    nanosleep(&ts, NULL);
-    --waitCount;
-  }
-  if (waitCount == 0) {
-    // If not stopped, kill the thread
-    // TODO kill the read thread
-    result = -19;
-  }
+  Dart_Handle arg1 = HandleError(Dart_GetNativeArgument(arguments, 1));
+  int64_t arg1Int;
+  HandleError(Dart_IntegerToInt64(arg1, &arg1Int));
+  int tty_fd = arg1Int;
 
   flock(tty_fd, LOCK_UN);
-  int value = close(tty_fd);
-  if (value < 0) {
-    result = value;
-    lastErrno = errno;
-  }
-  tty_fd = -1;
-  notificationPort = -1;
+  int64_t result = close(tty_fd);
+  lastErrno = result < 0 ? errno : 0;
 
   Dart_SetIntegerReturnValue(arguments, result);
   Dart_ExitScope();
@@ -318,6 +251,7 @@ FunctionLookup function_list[] = {
   {"closePort", closePort},
   {"lastError", lastError},
   {"openPort", openPort},
+  {"read", read},
   {"write", write},
   {NULL, NULL}
 };

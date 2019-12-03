@@ -4,6 +4,7 @@ import 'package:zwave/report/basic_report.dart';
 import 'package:zwave/report/sensor_binary_report.dart';
 import 'package:zwave/report/meter_report.dart';
 import 'package:zwave/report/sensor_multilevel_report.dart';
+import 'package:zwave/report/security_nonce_report.dart';
 
 /// [CommandClassDispatcher] processes ApplicationCommandHandler messages
 /// (messages with FUNC_ID_APPLICATION_COMMAND_HANDLER)
@@ -259,11 +260,6 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleCommandClassAlarm(List<int> data) {
-    return unhandledCommandClass(
-        COMMAND_CLASS_ALARM, 'COMMAND_CLASS_ALARM', data);
-  }
-
   T handleCommandClassAntitheft(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ANTITHEFT, 'COMMAND_CLASS_ANTITHEFT', data);
@@ -304,7 +300,7 @@ abstract class ApplicationCommandHandlerBase<T> {
   T handleCommandClassBasic(List<int> data) {
     switch (data[8]) {
       case BASIC_REPORT:
-        return handleBasicReport(new BasicReport(data));
+        return handleBasicReport(BasicReport(data));
       default:
         return unhandledCommandClass(
             COMMAND_CLASS_BASIC, 'COMMAND_CLASS_BASIC', data);
@@ -499,7 +495,7 @@ abstract class ApplicationCommandHandlerBase<T> {
   T handleCommandClassMeter(List<int> data) {
     switch (data[8]) {
       case METER_REPORT:
-        return handleMeterReport(new MeterReport(data));
+        return handleMeterReport(MeterReport(data));
       default:
         return unhandledCommandClass(
             COMMAND_CLASS_METER, 'COMMAND_CLASS_METER', data);
@@ -672,8 +668,18 @@ abstract class ApplicationCommandHandlerBase<T> {
   }
 
   T handleCommandClassSecurity(List<int> data) {
-    return unhandledCommandClass(
-        COMMAND_CLASS_SECURITY, 'COMMAND_CLASS_SECURITY', data);
+    switch (data[8]) {
+      case SECURITY_NONCE_REPORT:
+        return handleSecurityNonceReport(SecurityNonceReport(data));
+      default:
+        return unhandledCommandClass(
+            COMMAND_CLASS_SECURITY, 'COMMAND_CLASS_SECURITY', data);
+    }
+  }
+
+  T handleSecurityNonceReport(SecurityNonceReport report) {
+    logger.warning('Unhandled SecurityNonceReport from ${report.sourceNode}');
+    return null;
   }
 
   T handleCommandClassSecurity2(List<int> data) {
@@ -694,7 +700,7 @@ abstract class ApplicationCommandHandlerBase<T> {
   T handleCommandClassSensorBinary(List<int> data) {
     switch (data[8]) {
       case SENSOR_BINARY_REPORT:
-        return handleSensorBinaryReport(new SensorBinaryReport(data));
+        return handleSensorBinaryReport(SensorBinaryReport(data));
       default:
         return unhandledCommandClass(
             COMMAND_CLASS_SENSOR_BINARY, 'COMMAND_CLASS_SENSOR_BINARY', data);
@@ -714,7 +720,7 @@ abstract class ApplicationCommandHandlerBase<T> {
   T handleCommandClassSensorMultilevel(List<int> data) {
     switch (data[8]) {
       case SENSOR_MULTILEVEL_REPORT:
-        return handleSensorMultilevelReport(new SensorMultilevelReport(data));
+        return handleSensorMultilevelReport(SensorMultilevelReport(data));
       default:
         return unhandledCommandClass(COMMAND_CLASS_SENSOR_MULTILEVEL,
             'COMMAND_CLASS_SENSOR_MULTILEVEL', data);

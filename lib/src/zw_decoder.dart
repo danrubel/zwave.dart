@@ -25,7 +25,7 @@ class ZwDecoder {
 
   ZwDecoder(this.listener, {int messageTimeoutMsForTesting})
       : messageTimeout =
-            new Duration(milliseconds: messageTimeoutMsForTesting ?? 1500);
+            Duration(milliseconds: messageTimeoutMsForTesting ?? 1500);
 
   void clear() {
     _messageBuffer.clear();
@@ -138,7 +138,7 @@ class ZwDecoder {
 
       // From section 6.2.2 of the Serial API Host Appl. Prg. Guide
       // Data frame receiver timeout is 1500 ms
-      _messageTimer = new Timer(messageTimeout, () {
+      _messageTimer = Timer(messageTimeout, () {
         _logger.warning('<== $_messageBuffer partial timeout');
         listener.handleInvalidDataFrame();
         _messageBuffer.clear();
@@ -172,7 +172,7 @@ abstract class ZwDecodeListener {
   void handleInvalidDataFrame();
 }
 
-final Logger _logger = new Logger('ZwDecoder');
+final Logger _logger = Logger('ZwDecoder');
 
 void _logFiner(String label, data, String tag) {
   if (_logger.level <= Level.FINER) _logger.finer('$label $data $tag');

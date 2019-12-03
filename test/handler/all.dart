@@ -1,5 +1,5 @@
-import 'application_update_handler_test.dart' as appUpdateHandlerTest;
+import 'application_update_handler_test.dart' as app_update_handler;
 
 main() {
-  appUpdateHandlerTest.main();
+  app_update_handler.main();
 }

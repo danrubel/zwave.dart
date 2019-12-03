@@ -22,7 +22,7 @@ abstract class SwitchBinary implements ZwNodeMixin {
   void handleCommandClassSwitchBinary(List<int> data) {
     switch (data[8]) {
       case SWITCH_BINARY_REPORT:
-        final report = new SwitchBinaryReport(data);
+        final report = SwitchBinaryReport(data);
         stateValue = report.value;
         state = stateValue > 0;
         processedResult<SwitchBinaryReport>(report);
@@ -37,14 +37,14 @@ abstract class SwitchBinary implements ZwNodeMixin {
   /// Return true if the request was successful, else false.
   Future<void> requestState() async {
     SwitchBinaryReport report =
-        await commandHandler.request(new ZwRequest<SwitchBinaryReport>(
+        await commandHandler.request(ZwRequest<SwitchBinaryReport>(
       logger,
       id,
       buildSendDataRequest(id, [
         COMMAND_CLASS_SWITCH_BINARY,
         SWITCH_BINARY_GET,
       ]),
-      processResponse: (data) => new SwitchBinaryReport(data),
+      processResponse: (data) => SwitchBinaryReport(data),
       resultKey: SwitchBinaryReport,
     ));
     stateValue = report.value;
@@ -55,7 +55,7 @@ abstract class SwitchBinary implements ZwNodeMixin {
   /// Set the current state of the switch.
   Future<void> setState(bool newState) async {
     final newStateValue = newState ? 0xFF : 0x00;
-    await commandHandler.request(new ZwRequest<void>(
+    await commandHandler.request(ZwRequest<void>(
       logger,
       id,
       buildSendDataRequest(id, [
@@ -72,7 +72,7 @@ abstract class SwitchBinary implements ZwNodeMixin {
   Future<void> setStateValue(int value) async {
     final newStateValue = value <= 0 ? 0 : value <= 0x63 ? value : 0xFF;
     final newState = value > 0;
-    await commandHandler.request(new ZwRequest<void>(
+    await commandHandler.request(ZwRequest<void>(
       logger,
       id,
       buildSendDataRequest(id, [

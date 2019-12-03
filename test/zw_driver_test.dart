@@ -10,19 +10,19 @@ main() {
   ZwDriver driver;
   TestHandler requestHandler;
   TestHandler defaultResponseHandler;
-  TestController controller;
+  TestPort port;
 
   void expectComplete() {
     expect(requestHandler.expectedData, isNull);
     expect(defaultResponseHandler.expectedData, isNull);
-    expect(controller.expectedMessages, isEmpty);
-    expect(controller.responses, isEmpty);
+    expect(port.expectedMessages, isEmpty);
+    expect(port.responses, isEmpty);
   }
 
   setUp(() {
-    controller = TestController();
-    driver = new ZwDriver(controller.sendData, sendTimeoutMsForTesting: 25);
-    requestHandler = new TestHandler();
+    port = TestPort();
+    driver = ZwDriver(port.sendData, sendTimeoutMsForTesting: 25);
+    requestHandler = TestHandler();
     driver.requestHandler = requestHandler.process;
     defaultResponseHandler = TestHandler();
     driver.defaultResponseHandler = defaultResponseHandler.process;
@@ -35,14 +35,14 @@ main() {
         1, 20, 0, 4, 0, 11,
         14, 50, 2, 33, 100, 0, 49, 128, 100, 0, 120, 0, 49, 128, 100, 231
       ];
-      controller.expectedMessages.add(ackMsg);
+      port.expectedMessages.add(ackMsg);
       requestHandler.expectedData = request;
       driver.handleDataFrame(request);
       expectComplete();
     });
 
     test('invalid', () {
-      controller.expectedMessages.add(nakMsg);
+      port.expectedMessages.add(nakMsg);
       driver.handleInvalidDataFrame();
       expectComplete();
     });
@@ -50,16 +50,16 @@ main() {
 
   group('client', () {
     testValidMessageAndResponse() async {
-      controller.expectedMessages.add(versionRequest);
-      controller.responses.add(() {
-        new Future(driver.handleAck);
-        new Future(() {
+      port.expectedMessages.add(versionRequest);
+      port.responses.add(() {
+        Future(driver.handleAck);
+        Future(() {
           driver.handleDataFrame(versionResponse);
         });
       });
-      controller.expectedMessages.add(ackMsg);
+      port.expectedMessages.add(ackMsg);
 
-      final completer = new Completer<List<int>>();
+      final completer = Completer<List<int>>();
       await driver.send(versionRequest,
           responseCompleter: completer,
           responseTimeout: const Duration(milliseconds: 20));
@@ -74,9 +74,9 @@ main() {
     });
 
     test('send timeout', () async {
-      controller.expectedMessages.add(versionRequest);
+      port.expectedMessages.add(versionRequest);
 
-      final completer = new Completer<List<int>>();
+      final completer = Completer<List<int>>();
       try {
         await driver.send(versionRequest,
             responseCompleter: completer,
@@ -90,12 +90,12 @@ main() {
     });
 
     test('send corrupted', () async {
-      controller.expectedMessages.add(versionRequest);
-      controller.responses.add(() {
-        new Future(driver.handleNak);
+      port.expectedMessages.add(versionRequest);
+      port.responses.add(() {
+        Future(driver.handleNak);
       });
 
-      final completer = new Completer<List<int>>();
+      final completer = Completer<List<int>>();
       try {
         await driver.send(versionRequest,
             responseCompleter: completer,
@@ -109,12 +109,12 @@ main() {
     });
 
     test('send canceled', () async {
-      controller.expectedMessages.add(versionRequest);
-      controller.responses.add(() {
-        new Future(driver.handleCan);
+      port.expectedMessages.add(versionRequest);
+      port.responses.add(() {
+        Future(driver.handleCan);
       });
 
-      final completer = new Completer<List<int>>();
+      final completer = Completer<List<int>>();
       try {
         await driver.send(versionRequest,
             responseCompleter: completer,
@@ -128,17 +128,17 @@ main() {
     });
 
     test('response timeout', () async {
-      controller.expectedMessages.add(versionRequest);
-      controller.responses.add(() {
-        new Future(driver.handleAck);
+      port.expectedMessages.add(versionRequest);
+      port.responses.add(() {
+        Future(driver.handleAck);
       });
 
-      final completer = new Completer<List<int>>();
+      final completer = Completer<List<int>>();
       await driver.send(versionRequest,
           responseCompleter: completer,
           responseTimeout: const Duration(milliseconds: 20));
-      expect(controller.expectedMessages, isEmpty);
-      expect(controller.responses, isEmpty);
+      expect(port.expectedMessages, isEmpty);
+      expect(port.responses, isEmpty);
       try {
         await completer.future;
         fail('expected exception');
@@ -151,10 +151,10 @@ main() {
   });
 }
 
-const ackMsg = const <int>[ACK];
-const nakMsg = const <int>[NAK];
+const ackMsg = <int>[ACK];
+const nakMsg = <int>[NAK];
 
-const versionResponse = const <int>[
+const versionResponse = <int>[
   1, // SOF
   16, // length excluding SOF and checksum
   1, // response
@@ -164,7 +164,7 @@ const versionResponse = const <int>[
   1, // library type
   153 // checksum
 ];
-const versionRequest = const <int>[
+const versionRequest = <int>[
   1, // SOF
   3, // length excluding SOF and checksum
   0, // request
@@ -172,11 +172,11 @@ const versionRequest = const <int>[
   233 // checksum
 ];
 
-class TestController {
+class TestPort {
   final expectedMessages = <List<int>>[];
   final responses = <void Function()>[];
 
-  bool sendData(List<int> data, String name) {
+  void sendData(List<int> data) {
     if (expectedMessages.isEmpty) fail('unexpected send: $data');
     final expectedMsg = expectedMessages.removeAt(0);
     expect(data, equals(expectedMsg));
@@ -187,7 +187,6 @@ class TestController {
           (expectedMsg.isNotEmpty && expectedMessages[0] == ackMsg))
         responses.removeAt(0)();
     }
-    return true;
   }
 }
 

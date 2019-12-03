@@ -4,14 +4,14 @@ import 'package:zwave/src/zw_decoder.dart';
 import 'package:zwave/zw_exception.dart';
 import 'package:logging/logging.dart';
 
-typedef void MessageHandler(List<int> data);
+typedef MessageHandler = void Function(List<int> data);
 
 /// [ZwDriver] handles low level communication with the Z-Wave controller.
 /// Low level ACK (acknowledge) and NAK (corrupt message) responses
 /// are automatically sent and higher level message data is forwarded
 /// to the provided request/response handlers.
 class ZwDriver implements ZwDecodeListener {
-  final bool Function(List<int> data, String name) _sendData;
+  final void Function(List<int> data) _sendData;
   final Duration sendTimeout;
 
   /// [requestHandler] processes requests
@@ -33,8 +33,7 @@ class ZwDriver implements ZwDecodeListener {
   int _handleDefaultResponseExceptionCount = 0;
 
   ZwDriver(this._sendData, {int sendTimeoutMsForTesting})
-      : sendTimeout =
-            new Duration(milliseconds: sendTimeoutMsForTesting ?? 1600);
+      : sendTimeout = Duration(milliseconds: sendTimeoutMsForTesting ?? 1600);
 
   /// Send the specified message and return a [Future]
   /// that completes when the message is acknowledged
@@ -48,8 +47,8 @@ class ZwDriver implements ZwDecodeListener {
     if (_responseCompleter != null) _error('only one send/response at a time');
 
     _logFiner('==>', data, 'REQ');
-    if (!_sendData(data, 'REQ')) throw ZwException.sendFailed;
-    _sendCompleter = new Completer<void>();
+    _sendData(data);
+    _sendCompleter = Completer<void>();
     _responseCompleter = responseCompleter;
 
     // From section 6.2.2 of the Serial API Host Appl. Prg. Guide
@@ -62,7 +61,7 @@ class ZwDriver implements ZwDecodeListener {
     }).then((_) {
       _sendCompleter = null;
       if (_responseCompleter != null && responseTimeout != null) {
-        _responseTimer = new Timer(responseTimeout, () {
+        _responseTimer = Timer(responseTimeout, () {
           _logger.warning('response timeout $data');
           _responseCompleter.completeError(ZwException.responseTimeout);
           _responseCompleter = null;
@@ -72,16 +71,16 @@ class ZwDriver implements ZwDecodeListener {
     });
   }
 
-  bool sendAck() {
-    const ackMsg = const <int>[ACK];
+  void sendAck() {
+    const ackMsg = <int>[ACK];
     _logFinest('==>', ackMsg, 'ACK');
-    return _sendData(ackMsg, 'ACK');
+    _sendData(ackMsg);
   }
 
-  bool sendNak() {
-    const nakMsg = const <int>[NAK];
+  void sendNak() {
+    const nakMsg = <int>[NAK];
     _logFinest('==>', nakMsg, 'NAK');
-    return _sendData(nakMsg, 'NAK');
+    _sendData(nakMsg);
   }
 
   @override
@@ -125,9 +124,9 @@ class ZwDriver implements ZwDecodeListener {
         break;
       default:
         _logger.warning('unknown message type: ${dataFrame[2]} $dataFrame');
-        const cancelMsg = const <int>[CAN];
+        const cancelMsg = <int>[CAN];
         _logFinest('==>', cancelMsg, 'CAN');
-        _sendData(cancelMsg, 'CAN');
+        _sendData(cancelMsg);
         break;
     }
   }
@@ -187,11 +186,11 @@ class ZwDriver implements ZwDecodeListener {
   }
 }
 
-final Logger _logger = new Logger('ZwDriver');
+final Logger _logger = Logger('ZwDriver');
 
 void _error(String message) {
   _logger.warning(message);
-  throw new ZwException(message);
+  throw ZwException(message);
 }
 
 void _logFiner(String label, data, String tag) {

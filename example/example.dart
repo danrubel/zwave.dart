@@ -8,10 +8,10 @@ import 'package:zwave/port/zw_port.dart';
 import 'wall_switch.dart';
 
 Future<void> main() async {
-  final example = new Example(new RpiZwPort());
+  final example = Example(RpiZwPort());
   await example.start();
   await example.turnLampOn();
-  await new Future.delayed(const Duration(seconds: 2));
+  await Future.delayed(const Duration(seconds: 2));
   await example.turnLampOff();
   await example.stop();
 }
@@ -21,14 +21,13 @@ class Example {
   final ZwManager manager;
 
   // Change `9` to the node id of your wall switch or switched outlet
-  final lamp = new WallSwitch(9, 'living room', 'lamp');
+  final lamp = WallSwitch(9, 'living room', 'lamp');
 
-  Example(this.port) : manager = new ZwManager(port.driver) {
+  Example(this.port) : manager = ZwManager(port.driver) {
     manager.add(lamp);
   }
 
   Future<void> start() async {
-
     // Update this line with the path to your Z-Wave controller
     await port.open('/dev/ttyACM0');
 
@@ -44,4 +43,4 @@ class Example {
   }
 }
 
-Logger logger = new Logger('Example');
+Logger logger = Logger('Example');

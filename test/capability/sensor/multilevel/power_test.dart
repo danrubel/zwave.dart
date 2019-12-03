@@ -7,10 +7,9 @@ import '../../../report/sensor_multilevel_report_test.dart';
 
 main() {
   test('report', () {
-    final node = new TestPower(11);
+    final node = TestPower(11);
     expect(node.power, isNull);
-    node.handleSensorMultilevelPower(
-        new SensorMultilevelReport(powerReportData));
+    node.handleSensorMultilevelPower(SensorMultilevelReport(powerReportData));
     expect(node.power, 0.387);
   });
 }

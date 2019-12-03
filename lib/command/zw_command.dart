@@ -12,7 +12,7 @@ abstract class ZwCommand<T> extends ZwMessage {
   Completer<List<int>> _responseCompleter;
 
   ZwCommand() {
-    logger = new Logger('$runtimeType');
+    logger = Logger('$runtimeType');
   }
 
   /// Return the complete message to be sent out on the Z-Wave network
@@ -52,7 +52,7 @@ abstract class ZwCommand<T> extends ZwMessage {
   /// Send the command and return a future that completes with the result
   Future<T> send(CommandHandler handler) async {
     if (_responseCompleter != null) throw 'already called send';
-    _responseCompleter = new Completer<List<int>>();
+    _responseCompleter = Completer<List<int>>();
     Future<T> result = _responseCompleter.future.then(processResponse);
     await handler.send(this);
     return result;

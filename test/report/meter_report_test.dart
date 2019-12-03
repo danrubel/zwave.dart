@@ -4,7 +4,7 @@ import 'package:zwave/report/meter_report.dart';
 
 main() {
   test('report 1', () {
-    final report = new MeterReport(electricalReportData);
+    final report = MeterReport(electricalReportData);
     expect(report.commandClass, COMMAND_CLASS_METER);
     expect(report.command, 0x02 /* METER_REPORT */);
     expect(report.sourceNode, 0x0B);
@@ -19,7 +19,7 @@ main() {
   });
 
   test('report 2', () {
-    final report = new MeterReport(const <int>[
+    final report = MeterReport(const <int>[
       0x01, // SOF
       0x14, // length excluding SOF and checksum
       0x00, // request
@@ -48,7 +48,7 @@ main() {
   });
 }
 
-const electricalReportData = const <int>[
+const electricalReportData = <int>[
   0x01, // SOF
   0x14, // length excluding SOF and checksum
   0x00, // request
@@ -65,7 +65,7 @@ const electricalReportData = const <int>[
   0xE7, // Checksum
 ];
 
-const electricalNextReportData = const <int>[
+const electricalNextReportData = <int>[
   0x01, // SOF
   0x14, // length excluding SOF and checksum
   0x00, // request

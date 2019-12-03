@@ -8,10 +8,10 @@ const buildScriptVersion = 2;
 
 main(List<String> args) {
   // Locate the Dart SDK
-  File dartVm = new File(Platform.executable);
+  File dartVm = File(Platform.executable);
   print('Dart VM... ${dartVm.path}');
   if (!dartVm.isAbsolute) {
-    dartVm = new File.fromUri(Directory.current.uri.resolve(dartVm.path));
+    dartVm = File.fromUri(Directory.current.uri.resolve(dartVm.path));
     print('Dart VM... ${dartVm.path}');
   }
   abortIf(!dartVm.isAbsolute, 'Failed to find absolute path to Dart VM');
@@ -22,28 +22,28 @@ main(List<String> args) {
 
   // Locate dart_api.h
   const headerPath = 'include/dart_api.h';
-  final headerFile = new File.fromUri(dartSdk.uri.resolve(headerPath));
+  final headerFile = File.fromUri(dartSdk.uri.resolve(headerPath));
   abortIf(!headerFile.existsSync(), 'Failed to find $headerPath');
 
   // Run pub list to determine the location of the zwave package being used
-  final pub = new File.fromUri(dartSdk.uri.resolve('bin/pub'));
+  final pub = File.fromUri(dartSdk.uri.resolve('bin/pub'));
   String pubOut =
       Process.runSync(pub.path, ['list-package-dirs']).stdout as String;
   Map<String, dynamic> pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
   assertNoPubListError(pubResult);
   String dirName = pubResult['packages'][pkgName] as String;
-  final pkgDir = new Directory(dirName);
+  final pkgDir = Directory(dirName);
   print('Building library in ${pkgDir.path}');
 
   // Display the version of the zwave package being built
-  final pubspecFile = new File(join(pkgDir.path, '..', 'pubspec.yaml'));
+  final pubspecFile = File(join(pkgDir.path, '..', 'pubspec.yaml'));
   abortIf(!pubspecFile.existsSync(), 'Failed to find ${pubspecFile.path}');
   final pubspec = pubspecFile.readAsStringSync();
   print('$pkgName version ${parseVersion(pubspec)}');
 
   // Build the native library
-  final nativeDir = new Directory(join(pkgDir.path, 'src', 'native'));
-  final buildScriptFile = new File(join(nativeDir.path, 'build_lib'));
+  final nativeDir = Directory(join(pkgDir.path, 'src', 'native'));
+  final buildScriptFile = File(join(nativeDir.path, 'build_lib'));
   assertRunningOnRaspberryPi();
   final buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);
@@ -93,7 +93,7 @@ void assertNoPubListError(Map<String, dynamic> pubResult) {
 
 /// Assert that this script is executing on the Raspberry Pi.
 assertRunningOnRaspberryPi() {
-  if (!new Directory('/home/pi').existsSync()) {
+  if (!Directory('/home/pi').existsSync()) {
     print('Not running on Raspberry Pi... skipping build');
     throw 'Aborting build';
   }

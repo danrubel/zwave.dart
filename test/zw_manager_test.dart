@@ -10,7 +10,7 @@ import 'zw_driver_test.dart';
 import 'zw_request_test.dart';
 
 void main() {
-  new ZwManagerTest().init();
+  ZwManagerTest().init();
 }
 
 class ZwManagerTest extends ZwRequestTest {
@@ -27,12 +27,12 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('canceled', () async {
         // Send plus 3 retries
-        controller.expectedMessages
+        port.expectedMessages
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest);
-        controller.responses
+        port.responses
           ..add(sendCancel)
           ..add(sendCancel)
           ..add(sendCancel)
@@ -49,16 +49,12 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('corrupted', () async {
         // Send plus 3 retries
-        controller.expectedMessages
+        port.expectedMessages
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest);
-        controller.responses
-          ..add(sendNak)
-          ..add(sendNak)
-          ..add(sendNak)
-          ..add(sendNak);
+        port.responses..add(sendNak)..add(sendNak)..add(sendNak)..add(sendNak);
 
         try {
           await manager.apiLibraryVersion();
@@ -71,14 +67,14 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('send timeout', () async {
         // Send plus 3 retries
-        controller.expectedMessages
+        port.expectedMessages
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest)
           ..add(versionRequest);
 
         try {
-          await new TestCommand(FUNC_ID_ZW_GET_VERSION, null).send(manager);
+          await TestCommand(FUNC_ID_ZW_GET_VERSION, null).send(manager);
           fail('expected exception');
         } on ZwException {
           // expected
@@ -90,7 +86,7 @@ class ZwManagerTest extends ZwRequestTest {
         expectingRequestNoResponse(versionRequest);
 
         try {
-          await new TestCommand(FUNC_ID_ZW_GET_VERSION, null).send(manager);
+          await TestCommand(FUNC_ID_ZW_GET_VERSION, null).send(manager);
           fail('expected exception');
         } on ZwException catch (error) {
           expect(error, ZwException.responseTimeout);
@@ -103,7 +99,7 @@ class ZwManagerTest extends ZwRequestTest {
       test('without ZwCommand.send', () async {
         ZwException exception;
         try {
-          await manager.send(new TestCommand(1, null));
+          await manager.send(TestCommand(1, null));
         } on ZwException catch (e) {
           exception = e;
         }
@@ -113,7 +109,7 @@ class ZwManagerTest extends ZwRequestTest {
       test('null data', () async {
         ZwException exception;
         try {
-          await new TestBadDataCommand(1, null).send(manager);
+          await TestBadDataCommand(1, null).send(manager);
         } on ZwException catch (e) {
           exception = e;
         }
@@ -121,15 +117,15 @@ class ZwManagerTest extends ZwRequestTest {
       });
 
       test('process response exception', () async {
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Simple);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
         String exception;
         try {
-          await new TestProcessResponseFailCommand(1, null).send(manager);
+          await TestProcessResponseFailCommand(1, null).send(manager);
         } catch (e) {
           exception = e as String;
         }
@@ -140,7 +136,7 @@ class ZwManagerTest extends ZwRequestTest {
 //        startLogger();
 
         // 3 sends plus 1 retry
-        controller.expectedMessages
+        port.expectedMessages
           ..add(request1)
           ..add(request1) // retry
           ..add(ackMsg)
@@ -150,7 +146,7 @@ class ZwManagerTest extends ZwRequestTest {
           ..add(ackMsg);
 
         // 3 responses plus 1 NAK
-        controller.responses
+        port.responses
           ..add(sendNak)
           ..add(() {
             sendAck();
@@ -166,11 +162,11 @@ class ZwManagerTest extends ZwRequestTest {
           });
 
         final command1 =
-            new TestCommand(1, null, expectedResponse: response1Simple);
+            TestCommand(1, null, expectedResponse: response1Simple);
         final command2 =
-            new TestCommand(2, null, expectedResponse: response2Simple);
+            TestCommand(2, null, expectedResponse: response2Simple);
         final command3 =
-            new TestCommand(3, null, expectedResponse: response3Simple);
+            TestCommand(3, null, expectedResponse: response3Simple);
 
         await command1.send(manager);
         await command2.send(manager);
@@ -180,7 +176,7 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('simultaneous', () async {
         // 3 sends plus 1 retry
-        controller.expectedMessages
+        port.expectedMessages
           ..add(request1)
           ..add(request1) // retry
           ..add(ackMsg)
@@ -190,7 +186,7 @@ class ZwManagerTest extends ZwRequestTest {
           ..add(ackMsg);
 
         // 3 responses plus 1 NAK
-        controller.responses
+        port.responses
           ..add(sendNak)
           ..add(() {
             sendAck();
@@ -206,11 +202,11 @@ class ZwManagerTest extends ZwRequestTest {
           });
 
         final command1 =
-            new TestCommand(1, null, expectedResponse: response1Simple);
+            TestCommand(1, null, expectedResponse: response1Simple);
         final command2 =
-            new TestCommand(2, null, expectedResponse: response2Simple);
+            TestCommand(2, null, expectedResponse: response2Simple);
         final command3 =
-            new TestCommand(3, null, expectedResponse: response3Simple);
+            TestCommand(3, null, expectedResponse: response3Simple);
 
         Future<void> result1 = command1.send(manager);
         Future<void> result2 = command2.send(manager);
@@ -227,7 +223,7 @@ class ZwManagerTest extends ZwRequestTest {
       test('null data', () async {
         dynamic exception;
         try {
-          await manager.request(new TestRequest(manager, null, null));
+          await manager.request(TestRequest(manager, null, null));
         } catch (e) {
           exception = e;
         }
@@ -237,8 +233,8 @@ class ZwManagerTest extends ZwRequestTest {
       test('null in data', () async {
         dynamic exception;
         try {
-          await manager.request(new ZwRequest(
-              manager.logger, null, buildFunctRequest(7, [null])));
+          await manager.request(
+              ZwRequest(manager.logger, null, buildFunctRequest(7, [null])));
         } catch (e) {
           exception = e;
         }
@@ -246,32 +242,33 @@ class ZwManagerTest extends ZwRequestTest {
       });
 
       test('process simple response', () async {
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Simple);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
         bool processResponseCalled = false;
-        await manager.request(
-            new TestRequest(manager, 8, request1, processResponse: (data) {
+        await manager
+            .request(TestRequest(manager, 8, request1, processResponse: (data) {
           processResponseCalled = true;
+          return null;
         }));
         expect(processResponseCalled, isFalse);
         expectComplete();
       });
 
       test('process complex response', () async {
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Complex);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
         const expectedResult = 'expected result';
         bool processResponseCalled = false;
         final request =
-            new TestRequest(manager, 8, request1, processResponse: (data) {
+            TestRequest(manager, 8, request1, processResponse: (data) {
           expect(processResponseCalled, isFalse);
           processResponseCalled = true;
           expect(data, response1Complex);
@@ -284,16 +281,16 @@ class ZwManagerTest extends ZwRequestTest {
       });
 
       test('process response exception', () async {
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Complex);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
         const expectedException = 'some random exception';
         String exception;
         try {
-          await manager.request(new ZwRequest(
+          await manager.request(ZwRequest(
               manager.logger, 1, buildFunctRequest(1),
               processResponse: (data) => throw expectedException));
         } on String catch (e) {
@@ -303,17 +300,17 @@ class ZwManagerTest extends ZwRequestTest {
       });
 
       test('process delayed response timeout', () async {
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Simple);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
 
         const resultKey = 'some key';
         bool processResponseCalled = false;
         final request =
-            new TestRequest(manager, 8, request1, processResponse: (data) {
+            TestRequest(manager, 8, request1, processResponse: (data) {
           expect(processResponseCalled, isFalse);
           processResponseCalled = true;
           return null;
@@ -333,16 +330,16 @@ class ZwManagerTest extends ZwRequestTest {
       test('process delayed response', () async {
 //        startLogger();
 
-        controller.expectedMessages.add(request1);
-        controller.responses.add(() {
+        port.expectedMessages.add(request1);
+        port.responses.add(() {
           sendAck();
           sendData(response1Simple);
         });
-        controller.expectedMessages.add(ackMsg);
+        port.expectedMessages.add(ackMsg);
 
         bool processResponseCalled = false;
         final request =
-            new TestRequest(manager, 8, request1, processResponse: (data) {
+            TestRequest(manager, 8, request1, processResponse: (data) {
           expect(processResponseCalled, isFalse);
           processResponseCalled = true;
           return null;
@@ -375,7 +372,7 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('sequential', () async {
         // 3 sends plus 1 retry
-        controller.expectedMessages
+        port.expectedMessages
           ..add(request1)
           ..add(request1) // retry
           ..add(ackMsg)
@@ -385,7 +382,7 @@ class ZwManagerTest extends ZwRequestTest {
           ..add(ackMsg);
 
         // 3 responses plus 1 NAK
-        controller.responses
+        port.responses
           ..add(sendNak)
           ..add(() {
             sendAck();
@@ -402,8 +399,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult1 = 'result from request 1';
         bool called1 = false;
-        final req1 =
-            new TestRequest(manager, 1, request1, processResponse: (data) {
+        final req1 = TestRequest(manager, 1, request1, processResponse: (data) {
           expect(data, response1Complex);
           expect(called1, isFalse);
           called1 = true;
@@ -412,8 +408,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult2 = 'result from request 2';
         bool called2 = false;
-        final req2 =
-            new TestRequest(manager, 1, request2, processResponse: (data) {
+        final req2 = TestRequest(manager, 1, request2, processResponse: (data) {
           expect(data, response2Complex);
           expect(called2, isFalse);
           called2 = true;
@@ -422,8 +417,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult3 = 'result from request 3';
         bool called3 = false;
-        final req3 =
-            new TestRequest(manager, 1, request3, processResponse: (data) {
+        final req3 = TestRequest(manager, 1, request3, processResponse: (data) {
           expect(data, response3Complex);
           expect(called3, isFalse);
           called3 = true;
@@ -445,7 +439,7 @@ class ZwManagerTest extends ZwRequestTest {
 
       test('simultaneous', () async {
         // 3 sends plus 1 retry
-        controller.expectedMessages
+        port.expectedMessages
           ..add(request1)
           ..add(request1) // retry
           ..add(ackMsg)
@@ -455,7 +449,7 @@ class ZwManagerTest extends ZwRequestTest {
           ..add(ackMsg);
 
         // 3 responses plus 1 NAK
-        controller.responses
+        port.responses
           ..add(sendNak)
           ..add(() {
             sendAck();
@@ -472,8 +466,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult1 = 'result from request 1';
         bool called1 = false;
-        final req1 =
-            new TestRequest(manager, 1, request1, processResponse: (data) {
+        final req1 = TestRequest(manager, 1, request1, processResponse: (data) {
           expect(data, response1Complex);
           expect(called1, isFalse);
           called1 = true;
@@ -482,8 +475,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult2 = 'result from request 2';
         bool called2 = false;
-        final req2 =
-            new TestRequest(manager, 1, request2, processResponse: (data) {
+        final req2 = TestRequest(manager, 1, request2, processResponse: (data) {
           expect(data, response2Complex);
           expect(called2, isFalse);
           called2 = true;
@@ -492,8 +484,7 @@ class ZwManagerTest extends ZwRequestTest {
 
         const expectedResult3 = 'result from request 3';
         bool called3 = false;
-        final req3 =
-            new TestRequest(manager, 1, request3, processResponse: (data) {
+        final req3 = TestRequest(manager, 1, request3, processResponse: (data) {
           expect(data, response3Complex);
           expect(called3, isFalse);
           called3 = true;
@@ -540,21 +531,21 @@ class TestProcessResponseFailCommand extends TestCommand {
   }
 }
 
-const request1 = const <int>[
+const request1 = <int>[
   1, // SOF
   3, // length excluding SOF and checksum
   0, // request
   1,
   253 // checksum
 ];
-const request2 = const <int>[
+const request2 = <int>[
   1, // SOF
   3, // length excluding SOF and checksum
   0, // request
   2,
   254 // checksum
 ];
-const request3 = const <int>[
+const request3 = <int>[
   1, // SOF
   3, // length excluding SOF and checksum
   0, // request
@@ -562,7 +553,7 @@ const request3 = const <int>[
   255 // checksum
 ];
 
-const response1Simple = const <int>[
+const response1Simple = <int>[
   1, // SOF
   4, // length excluding SOF and checksum
   1, // response
@@ -570,7 +561,7 @@ const response1Simple = const <int>[
   1,
   253 // checksum
 ];
-const response2Simple = const <int>[
+const response2Simple = <int>[
   1, // SOF
   4, // length excluding SOF and checksum
   1, // response
@@ -578,7 +569,7 @@ const response2Simple = const <int>[
   0,
   253 // checksum
 ];
-const response3Simple = const <int>[
+const response3Simple = <int>[
   1, // SOF
   4, // length excluding SOF and checksum
   1, // response
@@ -587,7 +578,7 @@ const response3Simple = const <int>[
   253 // checksum
 ];
 
-const response1Complex = const <int>[
+const response1Complex = <int>[
   1, // SOF
   7, // length excluding SOF and checksum
   1, // response
@@ -598,7 +589,7 @@ const response1Complex = const <int>[
   11,
   253 // checksum
 ];
-const response2Complex = const <int>[
+const response2Complex = <int>[
   1, // SOF
   7, // length excluding SOF and checksum
   1, // response
@@ -608,7 +599,7 @@ const response2Complex = const <int>[
   77,
   253 // checksum
 ];
-const response3Complex = const <int>[
+const response3Complex = <int>[
   1, // SOF
   7, // length excluding SOF and checksum
   1, // response
@@ -618,7 +609,7 @@ const response3Complex = const <int>[
   253 // checksum
 ];
 
-const unsolicitedRequest = const <int>[
+const unsolicitedRequest = <int>[
   1, // SOF
   7, // length excluding SOF and checksum
   0, // request

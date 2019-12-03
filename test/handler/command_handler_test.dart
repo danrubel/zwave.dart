@@ -30,4 +30,4 @@ class TestManager extends TestCommandHandler implements ZwManager {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-const delayedResponse = const <int>[1, 4, 1, 19, 1, 232];
+const delayedResponse = <int>[1, 4, 1, 19, 1, 232];

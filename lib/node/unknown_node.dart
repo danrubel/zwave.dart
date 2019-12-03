@@ -9,7 +9,7 @@ class UnknownNode extends ZwNode {
 
   @override
   Future<void> handleWakeUpNotification(ZwCommandClassReport report) async {
-    final sleepyNode = new UnknownSleepyNode(id);
+    final sleepyNode = UnknownSleepyNode(id);
     zwManager.add(sleepyNode);
     return sleepyNode.handleWakeUpNotification(report);
   }

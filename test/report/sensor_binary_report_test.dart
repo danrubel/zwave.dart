@@ -4,7 +4,7 @@ import 'package:zwave/report/sensor_binary_report.dart';
 
 main() {
   test('on', () {
-    final report = new SensorBinaryReport(const <int>[
+    final report = SensorBinaryReport(const <int>[
       0x01, // SOF
       0x09, // length excluding SOF and checksum
       0x00, // request
@@ -28,7 +28,7 @@ main() {
   });
 
   test('off', () {
-    final report = new SensorBinaryReport(const <int>[
+    final report = SensorBinaryReport(const <int>[
       0x01, // SOF
       0x09, // length excluding SOF and checksum
       0x00, // request

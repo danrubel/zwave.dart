@@ -18,8 +18,8 @@ import 'package:zwave/zw_exception.dart';
 /// devices are forwarded to the corresponding [ZwNode].
 /// Messages destine for physical devices are queue and sent sequentially.
 class ZwManager extends MessageDispatcher<void> implements CommandHandler {
-  final logger = new Logger('ZwManager');
-  final controller = new PrimaryController();
+  final logger = Logger('ZwManager');
+  final controller = PrimaryController();
   final ZwDriver driver;
   final int retryDelayMsForTesting;
 
@@ -32,11 +32,11 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
     add(controller);
   }
 
-  Future<ApiLibraryVersion> apiLibraryVersion() => request(new ZwRequest(
+  Future<ApiLibraryVersion> apiLibraryVersion() => request(ZwRequest(
         logger,
         1, // controller node id
         buildFunctRequest(FUNC_ID_ZW_GET_VERSION),
-        processResponse: (data) => new ApiLibraryVersion(data),
+        processResponse: (data) => ApiLibraryVersion(data),
       ));
 
   // ===== nodes ==========================================================
@@ -75,7 +75,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   ZwNode createUnknownNode(int nodeId) {
     if (existingNodeWithId(nodeId) != null) throw 'node $nodeId already exists';
     logger.config('creating unknown node $nodeId');
-    ZwNode node = new UnknownNode(nodeId);
+    ZwNode node = UnknownNode(nodeId);
     add(node);
     return node;
   }
@@ -126,23 +126,58 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
     data[3] - function id 0x13 FUNC_ID_ZW_SEND_DATA
     data[4] - source node
     data[5] - command length
-    data[6] - command class (e.g. COMMAND_CLASS_NO_OPERATION)
+    data[6] - command class
     data[*] - command data
-    data[n-1] - transmit options (0x02 low power)
+    data[n-1] - transmit options (0x02 low power) <-- is this optional?
     data[n] - checksum
     */
-    if (data.length < 8) {
-      logger.warning('unknown send data received: $data');
-      return;
+    if (data.length < 10) {
+      if (data.length < 7) {
+        logger.warning('invalid send data received: $data');
+        return;
+      } else if (data.length == 7) {
+        if (data[5] /* command length */ == 0) {
+          //  0x01, // SOF
+          //  0x05, // length 5 excluding SOF and checksum
+          //  0x00, // request
+          //  0x13, // FUNC_ID_ZW_SEND_DATA
+          //  0x25, // source node 37
+          //  0x00, // command length 0
+          //  0xCC, // checksum
+          logger.fine('ping controller from node # ${data[4]}');
+        } else {
+          logger.warning('invalid send data received: $data');
+        }
+        return;
+      } else {
+        if (data[5] /* command length */ == 0 &&
+            data[6] == COMMAND_CLASS_NO_OPERATION) {
+          //  0x01, // SOF
+          //  0x07, // length 7 excluding SOF and checksum
+          //  0x00, // request
+          //  0x13, // FUNC_ID_ZW_SEND_DATA
+          //  0x25, // source node 37
+          //  0x00, // command length 0
+          //  0x00, // COMMAND_CLASS_NO_OPERATION
+          //  0x04, // transmit options: auto route (may not be included)
+          //  0xCA, // checksum
+          logger.fine('ping controller from node # ${data[4]}');
+        } else {
+          logger.warning('invalid send data received: $data');
+        }
+        return;
+      }
     }
-    nodeWithId(data[4]).dispatchSendData(data);
+    var nodeId = data[4];
+    var node = existingNodeWithId(nodeId) ?? createUnknownNode(nodeId);
+    node.dispatchSendData(data);
   }
 
   // ===== requests to devices ============================================
 
   @override
   Future<T> request<T>(ZwRequest<T> request) {
-    final task = new _RequestTask(this, request);
+    final task = _RequestTask(this, request);
     _process(task);
     return request.completer.future;
   }
@@ -170,7 +205,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   Future<void> send(ZwCommand command) async {
     if (command.responseCompleter == null)
       throw const ZwException('call ZwCommand.send rather than this method');
-    final task = new _CommandTask(this, command);
+    final task = _CommandTask(this, command);
     _process(task);
     return task.sendCompleter.future;
   }
@@ -210,7 +245,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   /// [processedResult] with this request's resultKey to indicate that
   /// the request is complete.
   void _awaitResult(ZwRequest request) {
-    request.resultEndTime = new DateTime.now().add(request.resultTimeout);
+    request.resultEndTime = DateTime.now().add(request.resultTimeout);
     _resultPool.add(request);
     _startResultTimer();
   }
@@ -228,7 +263,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
       );
       Duration duration = nextTime.difference(DateTime.now());
 
-      _resultTimer = new Timer(duration, () {
+      _resultTimer = Timer(duration, () {
         final now = DateTime.now();
         _resultPool.removeWhere((request) {
           if (now.isBefore(request.resultEndTime)) return false;
@@ -256,7 +291,7 @@ class _RequestTask extends _Task {
   final ZwManager manager;
   final ZwRequest request;
   final List<int> requestData;
-  final responseCompleter = new Completer<List<int>>();
+  final responseCompleter = Completer<List<int>>();
 
   _RequestTask(this.manager, this.request) : requestData = request.data;
 
@@ -269,7 +304,7 @@ class _RequestTask extends _Task {
       handleException(exception, trace);
     });
     return sendRequest().then((bool sent) {
-      return sent ? responseProcessed : new Future.value();
+      return sent ? responseProcessed : Future.value();
     });
   }
 
@@ -289,7 +324,7 @@ class _RequestTask extends _Task {
 
         // If the send was canceled, corrupted, or timeout, retry up to 3 times
         if (e.isSendCanceledCorruptedOrTimeout && retryCount < 3) {
-          await new Future.delayed(new Duration(
+          await Future.delayed(Duration(
               milliseconds:
                   manager.retryDelayMsForTesting ?? retryCount * 1000 + 100));
           ++retryCount;
@@ -343,14 +378,14 @@ abstract class _Task {
 class _CommandTask extends _Task {
   final ZwManager manager;
   final ZwCommand command;
-  final sendCompleter = new Completer<void>();
-  final responseCompleter = new Completer<List<int>>();
+  final sendCompleter = Completer<void>();
+  final responseCompleter = Completer<List<int>>();
 
   _CommandTask(this.manager, this.command);
 
   @override
   Future<void> run() async {
-    final finished = new Completer<void>();
+    final finished = Completer<void>();
 
     // ignore: unawaited_futures
     responseCompleter.future.then((List<int> response) {
@@ -377,7 +412,7 @@ class _CommandTask extends _Task {
 
         // If the send was canceled or corrupted, retry up to 3 times
         if (e.isSendCanceledCorruptedOrTimeout && retryCount < 3) {
-          await new Future.delayed(new Duration(
+          await Future.delayed(Duration(
               milliseconds:
                   manager.retryDelayMsForTesting ?? retryCount * 1000 + 100));
           ++retryCount;

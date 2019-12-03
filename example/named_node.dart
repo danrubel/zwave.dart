@@ -9,6 +9,6 @@ class NamedNode extends ZwNode with NodeNaming {
   NamedNode(int id, String location, String name) : super(id) {
     this.location = location;
     this.name = name;
-    logger = new Logger(description);
+    logger = Logger(description);
   }
 }

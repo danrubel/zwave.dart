@@ -1,4 +1,3 @@
-
 import 'package:zwave/capability/zw_node_mixin.dart';
 import 'package:zwave/report/meter_report.dart';
 

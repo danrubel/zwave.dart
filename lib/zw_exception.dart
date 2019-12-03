@@ -1,12 +1,12 @@
 class ZwException {
   final String message;
 
-  static const sendCanceled = const ZwException('send canceled');
-  static const sendCorrupted = const ZwException('send corrupted');
-  static const sendFailed = const ZwException('send failed');
-  static const sendTimeout = const ZwException('send timeout');
-  static const responseTimeout = const ZwException('response timeout');
-  static const resultTimeout = const ZwException('result timeout');
+  static const sendCanceled = ZwException('send canceled');
+  static const sendCorrupted = ZwException('send corrupted');
+  static const sendFailed = ZwException('send failed');
+  static const sendTimeout = ZwException('send timeout');
+  static const responseTimeout = ZwException('response timeout');
+  static const resultTimeout = ZwException('result timeout');
 
   const ZwException(this.message);
 

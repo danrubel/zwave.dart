@@ -7,10 +7,10 @@ import '../../../report/sensor_multilevel_report_test.dart';
 
 main() {
   test('report', () {
-    final node = new TestAirTemperature(16);
+    final node = TestAirTemperature(16);
     expect(node.temperature, isNull);
     node.handleSensorMultilevelAirTemperature(
-        new SensorMultilevelReport(airTempReportData));
+        SensorMultilevelReport(airTempReportData));
     expect((node.temperature * 10).round() / 10, 16.9);
   });
 }

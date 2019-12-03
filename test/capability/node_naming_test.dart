@@ -5,7 +5,7 @@ import 'package:zwave/node/zw_node.dart';
 import '../zw_request_test.dart';
 
 void main() {
-  new NodeNamingTest().init();
+  NodeNamingTest().init();
 }
 
 class NodeNamingTest extends ZwRequestTest {
@@ -14,13 +14,13 @@ class NodeNamingTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new TestNodeNamingNode(5);
+      node = TestNodeNamingNode(5);
       manager.add(node);
     });
 
     group('name', () {
       test('report', () {
-        final report = new NodeNameReport(nodeNameReportData);
+        final report = NodeNameReport(nodeNameReportData);
         expect(report.sourceNode, 6);
         expect(report.name, 'Porch Light');
       });
@@ -48,7 +48,7 @@ class NodeNamingTest extends ZwRequestTest {
 
     group('location', () {
       test('report', () {
-        final report = new NodeLocationReport(nodeLocationReportData);
+        final report = NodeLocationReport(nodeLocationReportData);
         expect(report.sourceNode, 6);
         expect(report.location, '');
       });
@@ -125,7 +125,7 @@ const getNameResult = [
   0x70, //
   0x90, // checksum
 ];
-const nodeNameReportData = const <int>[
+const nodeNameReportData = <int>[
   0x01, // SOF
   0x14, // length excluding SOF and checksum
   0x00, // request
@@ -210,7 +210,7 @@ const getLocationResult = [
   0x6D, //
   0xB9, // checksum
 ];
-const nodeLocationReportData = const <int>[
+const nodeLocationReportData = <int>[
   0x01, // SOF
   0x09, // length excluding SOF and checksum
   0x00, // request

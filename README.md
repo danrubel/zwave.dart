@@ -9,9 +9,10 @@ This Dart package enables interacting with
 
 ## Usage
 
-This package provides 
-* a [command line application](bin/zw.dart) for querying and updating Z-Wave devices
+This package provides
 * a [library of Dart classes](lib/) for interacting with a Z-Wave network
+* a [Z-Wave check port](bin/check_port.dart) for checking the connection to the Z-Wave controller
+* a [Z-Wave packet decoder](bin/decode_packet.dart) for decoding and printing Z-Wave packets
 * an [example](example/example.dart) using this package
 
 ## Requirements
@@ -36,10 +37,10 @@ the zwave package) run the following command to build the native library
     pub global run zwave:build_lib
 ```
 
-4) Finally, run the included [command line application](bin/zw.dart) to ensure that this package
+4) Finally, run the included [command line application](bin/check_port.dart) to ensure that this package
 is installed correctly and can communicate with your devices using your Z-Wave Controller.
 ```
-    pub global run zwave:zw
+    pub global run zwave:zw_check
 ```
 
 [pub global activate](https://www.dartlang.org/tools/pub/cmd/pub-global.html#activating-a-package)

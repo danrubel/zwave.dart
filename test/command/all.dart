@@ -1,9 +1,7 @@
 import 'package:test/test.dart';
 
-import 'zw_command_test.dart' as zwCommandTest;
-import 'zw_send_data_test.dart' as zwSendDataTest;
+import 'zw_command_test.dart' as zw_command;
 
 main() {
-  group('ZwCommand', zwCommandTest.main);
-  group('ZwSendDataTest', zwSendDataTest.main);
+  group('ZwCommand', zw_command.main);
 }

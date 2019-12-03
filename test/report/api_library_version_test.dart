@@ -3,7 +3,7 @@ import 'package:zwave/message_consts.dart';
 import 'package:zwave/report/api_library_version.dart';
 
 main() {
-  const response = const <int>[
+  const response = <int>[
     1, // SOF
     16, // message length excluding SOF and checksum
     1, // response
@@ -17,7 +17,7 @@ main() {
   ];
 
   test('valid', () {
-    final version = new ApiLibraryVersion(response);
+    final version = ApiLibraryVersion(response);
     expect(version.version, 'Z-Wave 3.95');
     expect(version.libraryType, 1);
   });

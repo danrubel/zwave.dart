@@ -8,7 +8,7 @@ import 'package:zwave/zw_exception.dart';
 import '../zw_request_test.dart';
 
 main() {
-  new BatteryTest().init();
+  BatteryTest().init();
 }
 
 class BatteryTest extends ZwRequestTest {
@@ -17,7 +17,7 @@ class BatteryTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new TestBatteryNode(7);
+      node = TestBatteryNode(7);
       manager.add(node);
     });
 
@@ -66,14 +66,14 @@ class BatteryTest extends ZwRequestTest {
     group('report', () {
       test('30 %', () {
         final data = [1, 9, 0, 4, 0, 16, 3, 128, 3, 30, 124];
-        final report = new BatteryReport(data);
+        final report = BatteryReport(data);
         expect(report.lowBatteryWarning, isFalse);
         expect(report.percent, 30);
       });
 
       test('low', () {
         final data = [1, 9, 0, 4, 0, 16, 3, 128, 3, 0xFF, 124];
-        final report = new BatteryReport(data);
+        final report = BatteryReport(data);
         expect(report.lowBatteryWarning, isTrue);
         expect(report.percent, 0);
       });
@@ -81,7 +81,7 @@ class BatteryTest extends ZwRequestTest {
   }
 }
 
-const batteryGetRequest = const <int>[
+const batteryGetRequest = <int>[
   0x01, // SOF
   0x08, // length excluding SOF and checksum
   0x00, // request
@@ -93,7 +93,7 @@ const batteryGetRequest = const <int>[
   0x25, // transmit options
   0x46, // checksum
 ];
-const batteryReport1 = const <int>[
+const batteryReport1 = <int>[
   0x01, // SOF
   0x09, // length excluding SOF and checksum
   0x01, // response
@@ -106,7 +106,7 @@ const batteryReport1 = const <int>[
   0x3A, // battery 58 %
   0x7C, // checksum
 ];
-const batteryReport2 = const <int>[
+const batteryReport2 = <int>[
   0x01, // SOF
   0x09, // length excluding SOF and checksum
   0x00, // request

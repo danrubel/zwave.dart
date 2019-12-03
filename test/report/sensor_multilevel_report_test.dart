@@ -4,7 +4,7 @@ import 'package:zwave/report/sensor_multilevel_report.dart';
 
 main() {
   test('air temp F', () {
-    final report = new SensorMultilevelReport(airTempReportData);
+    final report = SensorMultilevelReport(airTempReportData);
     expect(report.commandClass, COMMAND_CLASS_SENSOR_MULTILEVEL);
     expect(report.command, SENSOR_MULTILEVEL_REPORT);
     expect(report.sourceNode, 0x10);
@@ -16,7 +16,7 @@ main() {
   });
 
   test('humidity', () {
-    final report = new SensorMultilevelReport(humidityReportData);
+    final report = SensorMultilevelReport(humidityReportData);
     expect(report.commandClass, COMMAND_CLASS_SENSOR_MULTILEVEL);
     expect(report.command, SENSOR_MULTILEVEL_REPORT);
     expect(report.sourceNode, 0x10);
@@ -28,7 +28,7 @@ main() {
   });
 
   test('humidity', () {
-    final report = new SensorMultilevelReport(powerReportData);
+    final report = SensorMultilevelReport(powerReportData);
     expect(report.commandClass, COMMAND_CLASS_SENSOR_MULTILEVEL);
     expect(report.command, SENSOR_MULTILEVEL_REPORT);
     expect(report.sourceNode, 11);
@@ -40,7 +40,7 @@ main() {
   });
 }
 
-const airTempReportData = const <int>[
+const airTempReportData = <int>[
   0x01, // SOF
   0x0C, // length excluding SOF and checksum
   0x00, // request
@@ -60,7 +60,7 @@ const airTempReportData = const <int>[
   0x8C // checksum
 ];
 
-const humidityReportData = const <int>[
+const humidityReportData = <int>[
   0x01, // SOF
   0x0B, // length excluding SOF and checksum
   0x00, // request
@@ -80,7 +80,7 @@ const humidityReportData = const <int>[
   0xCA, // checksum
 ];
 
-const powerReportData = const <int>[
+const powerReportData = <int>[
   0x01, // SOF
   0x0E, // length excluding SOF and checksum
   0x00, // request

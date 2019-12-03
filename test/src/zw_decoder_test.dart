@@ -4,7 +4,7 @@ import 'package:zwave/src/zw_decoder.dart';
 import 'package:test/test.dart';
 
 main() {
-  const validFrame = const <int>[
+  const validFrame = <int>[
     // get version response
     1, 16, 1, 21, 90, 45, 87, 97, 118, 101, 32, 51, 46, 57, 53, 0, 1, 153
   ];
@@ -13,8 +13,8 @@ main() {
   TestListener listener;
 
   setUp(() {
-    listener = new TestListener();
-    decoder = new ZwDecoder(listener, messageTimeoutMsForTesting: 10);
+    listener = TestListener();
+    decoder = ZwDecoder(listener, messageTimeoutMsForTesting: 10);
   });
 
   group('one byte message', () {
@@ -94,7 +94,7 @@ main() {
     });
 
     test('checksum', () {
-      final invalidChecksum = new List<int>.from(validFrame);
+      final invalidChecksum = List<int>.from(validFrame);
       ++invalidChecksum[validFrame.length - 1];
       decoder.process(invalidChecksum);
       listener.expectReceived(['invalid']);
@@ -151,7 +151,7 @@ class TestListener implements ZwDecodeListener {
 
   Future hasReceived() {
     if (_completer != null) fail('already waiting');
-    _completer = new Completer();
+    _completer = Completer();
     return _completer.future;
   }
 }

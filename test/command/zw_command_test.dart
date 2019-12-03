@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 main() {
   test('functId', () {
-    final command = new TestCommand(0x07, null);
+    final command = TestCommand(0x07, null);
     expect(
         command.data,
         equals(const <int>[
@@ -16,7 +16,7 @@ main() {
   });
 
   test('functParam', () {
-    final command = new TestCommand(0x07, [0x10, 0x20]);
+    final command = TestCommand(0x07, [0x10, 0x20]);
     expect(
         command.data,
         equals(const <int>[
@@ -31,7 +31,7 @@ main() {
   });
 
   test('actual', () {
-    final command = new TestCommand(21, const <int>[
+    final command = TestCommand(21, const <int>[
       // get version response without header or checksum
       90, 45, 87, 97, 118, 101, 32, 51, 46, 57, 53, 0, 1
     ]);

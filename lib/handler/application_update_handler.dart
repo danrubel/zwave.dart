@@ -25,7 +25,7 @@ abstract class ApplicationUpdateHandler<T> implements ZwNodeMixin {
   bool firstUpdateStateNodeInfoReceived = true;
 
   Future<UpdateStateNodeInfoReceived> requestNodeInfo() =>
-      commandHandler.request(new ZwRequest(
+      commandHandler.request(ZwRequest(
           logger, id, buildFunctRequest(FUNC_ID_ZW_REQUEST_NODE_INFO, [id]),
           resultKey: UpdateStateNodeInfoReceived));
 

@@ -7,10 +7,10 @@ import '../../../report/sensor_multilevel_report_test.dart';
 
 main() {
   test('report', () {
-    final node = new TestHumidity(16);
+    final node = TestHumidity(16);
     expect(node.humidity, isNull);
     node.handleSensorMultilevelHumidity(
-        new SensorMultilevelReport(humidityReportData));
+        SensorMultilevelReport(humidityReportData));
     expect(node.humidity, 31);
   });
 }

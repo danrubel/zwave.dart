@@ -5,7 +5,7 @@ import 'package:zwave/node/zw_node.dart';
 import '../zw_request_test.dart';
 
 main() {
-  new ApplicationUpdateHandlerTest().init();
+  ApplicationUpdateHandlerTest().init();
 }
 
 class ApplicationUpdateHandlerTest extends ZwRequestTest {
@@ -14,7 +14,7 @@ class ApplicationUpdateHandlerTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new ZwNode(13);
+      node = ZwNode(13);
       manager.add(node);
     });
 

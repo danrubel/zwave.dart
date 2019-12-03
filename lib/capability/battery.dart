@@ -12,16 +12,16 @@ abstract class Battery implements ZwNodeMixin {
 
   /// Return a [Future] that completes with a current battery report.
   Future<BatteryReport> requestBattery() {
-    return commandHandler.request(new ZwRequest<BatteryReport>(logger, id,
+    return commandHandler.request(ZwRequest<BatteryReport>(logger, id,
         buildSendDataRequest(id, const [COMMAND_CLASS_BATTERY, BATTERY_GET]),
-        processResponse: (data) => battery = new BatteryReport(data),
+        processResponse: (data) => battery = BatteryReport(data),
         resultKey: BatteryReport));
   }
 
   void handleCommandClassBattery(List<int> data) {
     switch (data[8]) {
       case BATTERY_REPORT:
-        final report = new BatteryReport(data);
+        final report = BatteryReport(data);
         battery = report;
         processedResult<BatteryReport>(report);
         return;

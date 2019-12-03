@@ -22,7 +22,7 @@ abstract class NodeNaming implements ZwNodeMixin {
   /// Request the name from the device.
   Future<String> requestNodeName() async {
     await commandHandler.request(
-      new ZwRequest(
+      ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -46,7 +46,7 @@ abstract class NodeNaming implements ZwNodeMixin {
       0x00, // ASCII characters 0 - 127
     ];
     cmdData.addAll(buildAsciiChars(name));
-    return commandHandler.request(new ZwRequest(
+    return commandHandler.request(ZwRequest(
       logger,
       id,
       buildSendDataRequest(id, cmdData),
@@ -56,7 +56,7 @@ abstract class NodeNaming implements ZwNodeMixin {
   /// Request the location from the device.
   Future<String> requestNodeLocation() async {
     await commandHandler.request(
-      new ZwRequest(
+      ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -81,19 +81,19 @@ abstract class NodeNaming implements ZwNodeMixin {
     ];
     cmdData.addAll(buildAsciiChars(location));
     return commandHandler
-        .request(new ZwRequest(logger, id, buildSendDataRequest(id, cmdData)));
+        .request(ZwRequest(logger, id, buildSendDataRequest(id, cmdData)));
   }
 
   @override
   void handleCommandClassNodeNaming(List<int> data) {
     switch (data[8]) {
       case NODE_NAMING_NODE_NAME_REPORT:
-        var nameReport = new NodeNameReport(data);
+        var nameReport = NodeNameReport(data);
         name = nameReport.name;
         processedResult<NodeNameReport>(nameReport);
         return;
       case NODE_NAMING_NODE_LOCATION_REPORT:
-        var locationReport = new NodeLocationReport(data);
+        var locationReport = NodeLocationReport(data);
         location = locationReport.location;
         processedResult<NodeLocationReport>(locationReport);
         return;

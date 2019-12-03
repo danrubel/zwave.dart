@@ -9,7 +9,7 @@ import '../handler/command_handler_test.dart';
 import '../zw_request_test.dart';
 
 main() {
-  new SleepyNodeTest().init();
+  SleepyNodeTest().init();
 
   SleepyNode node;
   TestManager manager;
@@ -17,13 +17,13 @@ main() {
   Future<List<int>> futureResult;
 
   setUpAll(() {
-    manager = new TestManager();
-    node = new SleepyNode(7);
+    manager = TestManager();
+    node = SleepyNode(7);
     node.zwManager = manager;
   });
 
   test('queued send', () async {
-    command = new TestCommand(31, [], expectedResponse: response1);
+    command = TestCommand(31, [], expectedResponse: response1);
 
     futureResult = command.send(node.commandHandler);
     TimeoutException exception;
@@ -45,7 +45,7 @@ class SleepyNodeTest extends ZwRequestTest {
   @override
   void defineTests() {
     setUp(() {
-      node = new SleepyNode(7);
+      node = SleepyNode(7);
       manager.add(node);
     });
 
@@ -57,7 +57,7 @@ class SleepyNodeTest extends ZwRequestTest {
 //      startLogger();
 
       const expectedResult = 'a response';
-      Future<String> future = node.commandHandler.request(new TestRequest(
+      Future<String> future = node.commandHandler.request(TestRequest(
         manager,
         node.id,
         someRequest,
@@ -132,4 +132,4 @@ const wakeUpNoMoreRequest = [
   0x25, // transmit options
   0x48, // checksum
 ];
-const response1 = const <int>[1, 2, 3, 4, 5];
+const response1 = <int>[1, 2, 3, 4, 5];

@@ -3,13 +3,6 @@
 // The first const in each group is the command class const
 // followed by consts for each command in that command class.
 
-const COMMAND_CLASS_ALARM = 0x71;
-const ALARM_GET = 0x04;
-const ALARM_REPORT = 0x05;
-const ALARM_SET = 0x06;
-const ALARM_TYPE_SUPPORTED_GET = 0x07;
-const ALARM_TYPE_SUPPORTED_REPORT = 0x08;
-
 const COMMAND_CLASS_ANTITHEFT = 0x5D;
 const ANTITHEFT_SET = 0x01;
 const ANTITHEFT_GET = 0x02;

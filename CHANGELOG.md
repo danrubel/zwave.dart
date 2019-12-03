@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0
+* remove const COMMAND_CLASS_ALARM because it has been replaced by COMMAND_CLASS_NOTIFICATION
+* replace zwave cli with zw_check.dart for checking the connection to the Z-Wave controller
+* add app for decoding and printing zwave packets
+* move native zwave port operations to separate isolate
+* add security S0 nonce management
+
+## 0.9.1
+* update minimum Dart SDK version to 2.3.0
+* move native code to a separate isolate
+
 ## 0.9.0
 * Overhaul for Dart2
 * Rewrote native to remove dependency on Open ZWave binary

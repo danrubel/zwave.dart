@@ -26,7 +26,7 @@ class ZwNode extends ApplicationCommandHandler<void>
   CommandHandler get commandHandler => zwManager;
 
   ZwNode(this.id) {
-    logger = new Logger('$runtimeType $id');
+    logger = Logger('$runtimeType $id');
   }
 
   String get description {

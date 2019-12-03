@@ -15,16 +15,16 @@ abstract class ZwRequestTest {
   ZwManager manager;
   TestHandler requestHandler;
   TestHandler defaultResponseHandler;
-  TestController controller;
+  TestPort port;
 
   // This should be called once from the main() method to initialize tests.
   // Do not override this method but override defineTests instead.
   void init() {
     setUp(() {
-      controller = new TestController();
-      driver = new ZwDriver(controller.sendData, sendTimeoutMsForTesting: 25);
-      manager = new ZwManager(driver, retryDelayMsForTesting: 10);
-      requestHandler = new TestHandler();
+      port = TestPort();
+      driver = ZwDriver(port.sendData, sendTimeoutMsForTesting: 25);
+      manager = ZwManager(driver, retryDelayMsForTesting: 10);
+      requestHandler = TestHandler();
       driver.requestHandler = requestHandler.process;
       defaultResponseHandler = TestHandler();
       driver.defaultResponseHandler = defaultResponseHandler.process;
@@ -41,8 +41,8 @@ abstract class ZwRequestTest {
     assertValidMessage(request);
     if (request[2] != 0x00) throw 'invalid request';
 
-    controller.expectedMessages.add(request);
-    controller.responses.add(() {
+    port.expectedMessages.add(request);
+    port.responses.add(() {
       sendAck();
     });
   }
@@ -54,12 +54,12 @@ abstract class ZwRequestTest {
     assertValidMessage(response);
     if (response[2] != 0x01) throw 'invalid response';
 
-    controller.expectedMessages.add(request);
-    controller.responses.add(() {
+    port.expectedMessages.add(request);
+    port.responses.add(() {
       sendAck();
       sendData(response);
     });
-    controller.expectedMessages.add(ackMsg);
+    port.expectedMessages.add(ackMsg);
   }
 
   /// Add a request/simple-response/result pair
@@ -69,16 +69,16 @@ abstract class ZwRequestTest {
     assertValidMessage(result);
     if (result[2] != 0x00) throw 'invalid result';
 
-    controller.expectedMessages.add(request);
-    controller.responses.add(() {
+    port.expectedMessages.add(request);
+    port.responses.add(() {
       sendAck();
       sendSimpleResponse(request[3]);
       // TODO find a better way than using a delay
-      new Future.delayed(const Duration(milliseconds: 1)).then((_) {
+      Future.delayed(const Duration(milliseconds: 1)).then((_) {
         manager.dispatch(result);
       });
     });
-    controller.expectedMessages.add(ackMsg);
+    port.expectedMessages.add(ackMsg);
   }
 
   /// Add a request/simple-response pair
@@ -86,12 +86,12 @@ abstract class ZwRequestTest {
     assertValidMessage(request);
     if (request[2] != 0x00) throw 'invalid request';
 
-    controller.expectedMessages.add(request);
-    controller.responses.add(() {
+    port.expectedMessages.add(request);
+    port.responses.add(() {
       sendAck();
       sendSimpleResponse(request[3]);
     });
-    controller.expectedMessages.add(ackMsg);
+    port.expectedMessages.add(ackMsg);
   }
 
   /// Assert that the given id references an existing node.
@@ -115,24 +115,24 @@ abstract class ZwRequestTest {
   void expectComplete() {
     expect(requestHandler.expectedData, isNull);
     expect(defaultResponseHandler.expectedData, isNull);
-    expect(controller.expectedMessages, isEmpty);
-    expect(controller.responses, isEmpty);
+    expect(port.expectedMessages, isEmpty);
+    expect(port.responses, isEmpty);
   }
 
   void sendAck() {
-    new Future(driver.handleAck);
+    Future(driver.handleAck);
   }
 
   void sendNak() {
-    new Future(driver.handleNak);
+    Future(driver.handleNak);
   }
 
   void sendCancel() {
-    new Future(driver.handleCan);
+    Future(driver.handleCan);
   }
 
   void sendData(List<int> data) {
-    new Future(() {
+    Future(() {
       driver.handleDataFrame(data);
     });
   }
@@ -170,6 +170,14 @@ class TestRequest extends ZwRequest<String> {
   String toString() => '$runtimeType $data';
 }
 
+List<int> injectTestSeqNum(List<int> rawData, int seqNumIndex) {
+  var data = List<int>.from(rawData);
+  data[seqNumIndex] = nextTestSequenceNumber;
+  data.removeLast();
+  appendCrc(data);
+  return data;
+}
+
 /// Redirect logging output to the console for test debugging purposes.
 void startLogger() {
   if (_loggingStarted) return;
@@ -186,7 +194,7 @@ bool _loggingStarted = false;
 
 printData(String constName, List<int> data) {
   entry(int value, [String description]) {
-    final buf = new StringBuffer();
+    final buf = StringBuffer();
     buf.write(' 0x');
     buf.write(value.toRadixString(16).toUpperCase().padLeft(2, '0'));
     buf.write(', // ');
