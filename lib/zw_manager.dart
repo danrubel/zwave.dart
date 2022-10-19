@@ -21,10 +21,10 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   final logger = Logger('ZwManager');
   final controller = PrimaryController();
   final ZwDriver driver;
-  final int retryDelayMsForTesting;
+  final int? retryDelayMsForTesting;
 
   /// A list of tasks being processed or `null` if processing is complete.
-  List<_Task> _tasks;
+  List<_Task>? _tasks;
 
   ZwManager(this.driver, {this.retryDelayMsForTesting}) {
     driver.requestHandler = dispatch;
@@ -42,10 +42,10 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   // ===== nodes ==========================================================
 
   /// A list of [ZwNode]s indexed by their node ids
-  final _nodes = <ZwNode>[];
+  final _nodes = <ZwNode?>[];
 
   /// The current [ZwNode]s managed by the receiver
-  Iterable<ZwNode> get nodes => _nodes.where((node) => node != null).toList();
+  Iterable<ZwNode?> get nodes => _nodes.where((node) => node != null).toList();
 
   /// Insert a [node] into the list of nodes at the [node]'s id
   void add(ZwNode node) {
@@ -68,7 +68,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   }
 
   /// Return the node with the specified [nodeId] or `null` if none.
-  ZwNode existingNodeWithId(int nodeId) =>
+  ZwNode? existingNodeWithId(int nodeId) =>
       nodeId < _nodes.length ? _nodes[nodeId] : null;
 
   /// Create an [UnknownNode] and add it to the receiver's collection of nodes.
@@ -215,19 +215,19 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   void _process(_Task task) async {
     if (_tasks != null) {
       // If tasks are already being processed, add the task and return
-      _tasks.add(task);
+      _tasks!.add(task);
       return;
     }
     _tasks = <_Task>[task];
-    while (_tasks.isNotEmpty) {
-      task = _tasks[0];
+    while (_tasks!.isNotEmpty) {
+      task = _tasks![0];
       try {
         await task.run();
       } catch (e, s) {
         logger.warning('task exception', e, s);
         task.handleException(e, s);
       }
-      _tasks.remove(task);
+      _tasks!.remove(task);
     }
     // Discard the empty task list to indicate that processing is complete
     _tasks = null;
@@ -237,7 +237,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   final _resultPool = <ZwRequest>[];
 
   /// A timer for triggering removal of timed-out requests in [_resultPool].
-  Timer _resultTimer;
+  Timer? _resultTimer;
 
   /// Add the [request] to the pool of requests awaiting additional data
   /// from the device to complete the request. When the node receives
@@ -254,23 +254,23 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   void _startResultTimer() {
     _resultTimer?.cancel();
     if (_resultPool.isNotEmpty) {
-      DateTime nextTime = _resultPool.fold<DateTime>(
+      DateTime nextTime = _resultPool.fold<DateTime?>(
         _resultPool.first.resultEndTime,
         (endTime, request) {
-          final otherTime = request.resultEndTime;
-          return endTime.isBefore(otherTime) ? endTime : otherTime;
+          final otherTime = request.resultEndTime!;
+          return endTime!.isBefore(otherTime) ? endTime : otherTime;
         },
-      );
+      )!;
       Duration duration = nextTime.difference(DateTime.now());
 
       _resultTimer = Timer(duration, () {
         final now = DateTime.now();
         _resultPool.removeWhere((request) {
-          if (now.isBefore(request.resultEndTime)) return false;
+          if (now.isBefore(request.resultEndTime!)) return false;
           if (!request.completer.isCompleted) {
             request.completer.completeError(ZwException.resultTimeout);
           } else {
-            request.logger.warning('request completed but processedResult'
+            request.logger!.warning('request completed but processedResult'
                 '(${request.nodeId}, ${request.resultKey}) not called');
           }
           return true;
@@ -290,7 +290,7 @@ class PrimaryController extends ZwNode with NetworkManagementProxy {
 class _RequestTask extends _Task {
   final ZwManager manager;
   final ZwRequest request;
-  final List<int> requestData;
+  final List<int?>? requestData;
   final responseCompleter = Completer<List<int>>();
 
   _RequestTask(this.manager, this.request) : requestData = request.data;
@@ -317,10 +317,11 @@ class _RequestTask extends _Task {
             responseCompleter: responseCompleter,
             responseTimeout: request.responseTimeout);
 
-        if (retryCount > 0) request.logger.warning('sent on retry $retryCount');
+        if (retryCount > 0)
+          request.logger!.warning('sent on retry $retryCount');
         return true;
       } on ZwException catch (e) {
-        request.logger.warning('${e.message}, data: ${requestData}');
+        request.logger!.warning('${e.message}, data: ${requestData}');
 
         // If the send was canceled, corrupted, or timeout, retry up to 3 times
         if (e.isSendCanceledCorruptedOrTimeout && retryCount < 3) {
@@ -345,22 +346,22 @@ class _RequestTask extends _Task {
       }
     } else {
       if (request.processResponse != null) {
-        request.completer.complete(request.processResponse(data));
+        request.completer.complete(request.processResponse!(data));
       } else {
-        request.logger.warning('unexpected response: $data');
+        request.logger!.warning('unexpected response: $data');
         request.completer.complete(null);
       }
     }
   }
 
   @override
-  void handleException(exception, StackTrace trace) {
+  void handleException(exception, StackTrace? trace) {
     if (!responseCompleter.isCompleted) {
-      responseCompleter.completeError(exception, trace);
+      responseCompleter.completeError(exception as Object, trace);
     } else if (!request.completer.isCompleted) {
-      request.completer.completeError(exception, trace);
+      request.completer.completeError(exception as Object, trace);
     } else {
-      request.logger
+      request.logger!
           .warning('exception after operation complete', exception, trace);
     }
   }
@@ -389,7 +390,7 @@ class _CommandTask extends _Task {
 
     // ignore: unawaited_futures
     responseCompleter.future.then((List<int> response) {
-      command.responseCompleter.complete(response);
+      command.responseCompleter!.complete(response);
       finished.complete();
     }).catchError((exception, StackTrace trace) {
       handleException(exception, trace);
@@ -430,13 +431,13 @@ class _CommandTask extends _Task {
   }
 
   @override
-  void handleException(exception, StackTrace trace) {
+  void handleException(exception, StackTrace? trace) {
     if (!sendCompleter.isCompleted) {
-      sendCompleter.completeError(exception, trace);
+      sendCompleter.completeError(exception as Object, trace);
     } else if (!responseCompleter.isCompleted) {
-      responseCompleter.completeError(exception, trace);
-    } else if (!command.responseCompleter.isCompleted) {
-      command.responseCompleter.completeError(exception, trace);
+      responseCompleter.completeError(exception as Object, trace);
+    } else if (!command.responseCompleter!.isCompleted) {
+      command.responseCompleter!.completeError(exception as Object, trace);
     } else {
       manager.logger
           .warning('exception after response processed', exception, trace);
@@ -444,7 +445,7 @@ class _CommandTask extends _Task {
   }
 }
 
-bool _isSimpleResponse(int functId, List<int> data) {
+bool _isSimpleResponse(int? functId, List<int> data) {
   /*
   Check for a response such as ...
 

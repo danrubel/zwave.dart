@@ -13,9 +13,9 @@ import 'package:zwave/report/security_nonce_report.dart';
 /// various handle methods as necessary.
 abstract class ApplicationCommandHandlerBase<T> {
   Logger get logger;
-  List<T Function(List<int>)> handlers;
+  List<T Function(List<int>)>? handlers;
 
-  T dispatchApplicationCommand(List<int> data) {
+  T? dispatchApplicationCommand(List<int> data) {
     switch (data[7]) {
       case /* 0x00 */ COMMAND_CLASS_NO_OPERATION:
         return handleCommandClassNoOperation(data);
@@ -260,44 +260,44 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleCommandClassAntitheft(List<int> data) {
+  T? handleCommandClassAntitheft(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ANTITHEFT, 'COMMAND_CLASS_ANTITHEFT', data);
   }
 
-  T handleCommandClassApplicationCapability(List<int> data) {
+  T? handleCommandClassApplicationCapability(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_APPLICATION_CAPABILITY,
         'COMMAND_CLASS_APPLICATION_CAPABILITY', data);
   }
 
-  T handleCommandClassApplicationStatus(List<int> data) {
+  T? handleCommandClassApplicationStatus(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_APPLICATION_STATUS,
         'COMMAND_CLASS_APPLICATION_STATUS', data);
   }
 
-  T handleCommandClassAssociation(List<int> data) {
+  T? handleCommandClassAssociation(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ASSOCIATION, 'COMMAND_CLASS_ASSOCIATION', data);
   }
 
-  T handleCommandClassAssociationCommandConfiguration(List<int> data) {
+  T? handleCommandClassAssociationCommandConfiguration(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ASSOCIATION_COMMAND_CONFIGURATION,
         'COMMAND_CLASS_ASSOCIATION_COMMAND_CONFIGURATION',
         data);
   }
 
-  T handleCommandClassAssociationGrpInfo(List<int> data) {
+  T? handleCommandClassAssociationGrpInfo(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_ASSOCIATION_GRP_INFO,
         'COMMAND_CLASS_ASSOCIATION_GRP_INFO', data);
   }
 
-  T handleCommandClassBarrierOperator(List<int> data) {
+  T? handleCommandClassBarrierOperator(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_BARRIER_OPERATOR, 'COMMAND_CLASS_BARRIER_OPERATOR', data);
   }
 
-  T handleCommandClassBasic(List<int> data) {
+  T? handleCommandClassBasic(List<int> data) {
     switch (data[8]) {
       case BASIC_REPORT:
         return handleBasicReport(BasicReport(data));
@@ -307,192 +307,192 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleBasicReport(BasicReport report) {
+  T? handleBasicReport(BasicReport report) {
     logger.warning('Unhandled BasicReport from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassBasicTariffInfo(List<int> data) {
+  T? handleCommandClassBasicTariffInfo(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_BASIC_TARIFF_INFO,
         'COMMAND_CLASS_BASIC_TARIFF_INFO', data);
   }
 
-  T handleCommandClassBasicWindowCovering(List<int> data) {
+  T? handleCommandClassBasicWindowCovering(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_BASIC_WINDOW_COVERING,
         'COMMAND_CLASS_BASIC_WINDOW_COVERING', data);
   }
 
-  T handleCommandClassBattery(List<int> data) {
+  T? handleCommandClassBattery(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_BATTERY, 'COMMAND_CLASS_BATTERY', data);
   }
 
-  T handleCommandClassCentralScene(List<int> data) {
+  T? handleCommandClassCentralScene(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_CENTRAL_SCENE, 'COMMAND_CLASS_CENTRAL_SCENE', data);
   }
 
-  T handleCommandClassClimateControlSchedule(List<int> data) {
+  T? handleCommandClassClimateControlSchedule(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_CLIMATE_CONTROL_SCHEDULE,
         'COMMAND_CLASS_CLIMATE_CONTROL_SCHEDULE', data);
   }
 
-  T handleCommandClassClock(List<int> data) {
+  T? handleCommandClassClock(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_CLOCK, 'COMMAND_CLASS_CLOCK', data);
   }
 
-  T handleCommandClassConfiguration(List<int> data) {
+  T? handleCommandClassConfiguration(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_CONFIGURATION, 'COMMAND_CLASS_CONFIGURATION', data);
   }
 
-  T handleCommandClassControllerReplication(List<int> data) {
+  T? handleCommandClassControllerReplication(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_CONTROLLER_REPLICATION,
         'COMMAND_CLASS_CONTROLLER_REPLICATION', data);
   }
 
-  T handleCommandClassCrc16Encap(List<int> data) {
+  T? handleCommandClassCrc16Encap(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_CRC_16_ENCAP, 'COMMAND_CLASS_CRC_16_ENCAP', data);
   }
 
-  T handleCommandClassDcpConfig(List<int> data) {
+  T? handleCommandClassDcpConfig(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_DCP_CONFIG, 'COMMAND_CLASS_DCP_CONFIG', data);
   }
 
-  T handleCommandClassDcpMonitor(List<int> data) {
+  T? handleCommandClassDcpMonitor(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_DCP_MONITOR, 'COMMAND_CLASS_DCP_MONITOR', data);
   }
 
-  T handleCommandClassDeviceResetLocally(List<int> data) {
+  T? handleCommandClassDeviceResetLocally(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_DEVICE_RESET_LOCALLY,
         'COMMAND_CLASS_DEVICE_RESET_LOCALLY', data);
   }
 
-  T handleCommandClassDoorLock(List<int> data) {
+  T? handleCommandClassDoorLock(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_DOOR_LOCK, 'COMMAND_CLASS_DOOR_LOCK', data);
   }
 
-  T handleCommandClassDoorLockLogging(List<int> data) {
+  T? handleCommandClassDoorLockLogging(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_DOOR_LOCK_LOGGING,
         'COMMAND_CLASS_DOOR_LOCK_LOGGING', data);
   }
 
-  T handleCommandClassEnergyProduction(List<int> data) {
+  T? handleCommandClassEnergyProduction(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_ENERGY_PRODUCTION,
         'COMMAND_CLASS_ENERGY_PRODUCTION', data);
   }
 
-  T handleCommandClassEntryControl(List<int> data) {
+  T? handleCommandClassEntryControl(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ENTRY_CONTROL, 'COMMAND_CLASS_ENTRY_CONTROL', data);
   }
 
-  T handleCommandClassFirmwareUpdateMd(List<int> data) {
+  T? handleCommandClassFirmwareUpdateMd(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_FIRMWARE_UPDATE_MD,
         'COMMAND_CLASS_FIRMWARE_UPDATE_MD', data);
   }
 
-  T handleCommandClassGeographicLocation(List<int> data) {
+  T? handleCommandClassGeographicLocation(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_GEOGRAPHIC_LOCATION,
         'COMMAND_CLASS_GEOGRAPHIC_LOCATION', data);
   }
 
-  T handleCommandClassGroupingName(List<int> data) {
+  T? handleCommandClassGroupingName(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_GROUPING_NAME, 'COMMAND_CLASS_GROUPING_NAME', data);
   }
 
-  T handleCommandClassHail(List<int> data) {
+  T? handleCommandClassHail(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_HAIL, 'COMMAND_CLASS_HAIL', data);
   }
 
-  T handleCommandClassHrvControl(List<int> data) {
+  T? handleCommandClassHrvControl(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_HRV_CONTROL, 'COMMAND_CLASS_HRV_CONTROL', data);
   }
 
-  T handleCommandClassHrvStatus(List<int> data) {
+  T? handleCommandClassHrvStatus(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_HRV_STATUS, 'COMMAND_CLASS_HRV_STATUS', data);
   }
 
-  T handleCommandClassHumidityControlMode(List<int> data) {
+  T? handleCommandClassHumidityControlMode(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_HUMIDITY_CONTROL_MODE,
         'COMMAND_CLASS_HUMIDITY_CONTROL_MODE', data);
   }
 
-  T handleCommandClassHumidityControlOperatingState(List<int> data) {
+  T? handleCommandClassHumidityControlOperatingState(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_HUMIDITY_CONTROL_OPERATING_STATE,
         'COMMAND_CLASS_HUMIDITY_CONTROL_OPERATING_STATE', data);
   }
 
-  T handleCommandClassHumidityControlSetpoint(List<int> data) {
+  T? handleCommandClassHumidityControlSetpoint(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_HUMIDITY_CONTROL_SETPOINT,
         'COMMAND_CLASS_HUMIDITY_CONTROL_SETPOINT', data);
   }
 
-  T handleCommandClassInclusionController(List<int> data) {
+  T? handleCommandClassInclusionController(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_INCLUSION_CONTROLLER,
         'COMMAND_CLASS_INCLUSION_CONTROLLER', data);
   }
 
-  T handleCommandClassIndicator(List<int> data) {
+  T? handleCommandClassIndicator(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_INDICATOR, 'COMMAND_CLASS_INDICATOR', data);
   }
 
-  T handleCommandClassIpAssociation(List<int> data) {
+  T? handleCommandClassIpAssociation(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_IP_ASSOCIATION, 'COMMAND_CLASS_IP_ASSOCIATION', data);
   }
 
-  T handleCommandClassIpConfiguration(List<int> data) {
+  T? handleCommandClassIpConfiguration(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_IP_CONFIGURATION, 'COMMAND_CLASS_IP_CONFIGURATION', data);
   }
 
-  T handleCommandClassIrrigation(List<int> data) {
+  T? handleCommandClassIrrigation(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_IRRIGATION, 'COMMAND_CLASS_IRRIGATION', data);
   }
 
-  T handleCommandClassLanguage(List<int> data) {
+  T? handleCommandClassLanguage(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_LANGUAGE, 'COMMAND_CLASS_LANGUAGE', data);
   }
 
-  T handleCommandClassLock(List<int> data) {
+  T? handleCommandClassLock(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_LOCK, 'COMMAND_CLASS_LOCK', data);
   }
 
-  T handleCommandClassMailbox(List<int> data) {
+  T? handleCommandClassMailbox(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_MAILBOX, 'COMMAND_CLASS_MAILBOX', data);
   }
 
-  T handleCommandClassManufacturerProprietary(List<int> data) {
+  T? handleCommandClassManufacturerProprietary(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_MANUFACTURER_PROPRIETARY,
         'COMMAND_CLASS_MANUFACTURER_PROPRIETARY', data);
   }
 
-  T handleCommandClassManufacturerSpecific(List<int> data) {
+  T? handleCommandClassManufacturerSpecific(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_MANUFACTURER_SPECIFIC,
         'COMMAND_CLASS_MANUFACTURER_SPECIFIC', data);
   }
 
-  T handleCommandClassMark(List<int> data) {
+  T? handleCommandClassMark(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_MARK, 'COMMAND_CLASS_MARK', data);
   }
 
-  T handleCommandClassMeter(List<int> data) {
+  T? handleCommandClassMeter(List<int> data) {
     switch (data[8]) {
       case METER_REPORT:
         return handleMeterReport(MeterReport(data));
@@ -502,172 +502,172 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleMeterReport(MeterReport report) {
+  T? handleMeterReport(MeterReport report) {
     logger.warning('Unhandled MeterReport from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassMeterPulse(List<int> data) {
+  T? handleCommandClassMeterPulse(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_METER_PULSE, 'COMMAND_CLASS_METER_PULSE', data);
   }
 
-  T handleCommandClassMeterTblConfig(List<int> data) {
+  T? handleCommandClassMeterTblConfig(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_METER_TBL_CONFIG, 'COMMAND_CLASS_METER_TBL_CONFIG', data);
   }
 
-  T handleCommandClassMeterTblMonitor(List<int> data) {
+  T? handleCommandClassMeterTblMonitor(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_METER_TBL_MONITOR,
         'COMMAND_CLASS_METER_TBL_MONITOR', data);
   }
 
-  T handleCommandClassMeterTblPush(List<int> data) {
+  T? handleCommandClassMeterTblPush(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_METER_TBL_PUSH, 'COMMAND_CLASS_METER_TBL_PUSH', data);
   }
 
-  T handleCommandClassMtpWindowCovering(List<int> data) {
+  T? handleCommandClassMtpWindowCovering(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_MTP_WINDOW_COVERING,
         'COMMAND_CLASS_MTP_WINDOW_COVERING', data);
   }
 
-  T handleCommandClassMultiChannel(List<int> data) {
+  T? handleCommandClassMultiChannel(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_MULTI_CHANNEL, 'COMMAND_CLASS_MULTI_CHANNEL', data);
   }
 
-  T handleCommandClassMultiChannelAssociation(List<int> data) {
+  T? handleCommandClassMultiChannelAssociation(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_MULTI_CHANNEL_ASSOCIATION,
         'COMMAND_CLASS_MULTI_CHANNEL_ASSOCIATION', data);
   }
 
-  T handleCommandClassMultiCmd(List<int> data) {
+  T? handleCommandClassMultiCmd(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_MULTI_CMD, 'COMMAND_CLASS_MULTI_CMD', data);
   }
 
-  T handleCommandClassNetworkManagementBasic(List<int> data) {
+  T? handleCommandClassNetworkManagementBasic(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_NETWORK_MANAGEMENT_BASIC,
         'COMMAND_CLASS_NETWORK_MANAGEMENT_BASIC', data);
   }
 
-  T handleCommandClassNetworkManagementInclusion(List<int> data) {
+  T? handleCommandClassNetworkManagementInclusion(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_NETWORK_MANAGEMENT_INCLUSION,
         'COMMAND_CLASS_NETWORK_MANAGEMENT_INCLUSION', data);
   }
 
-  T handleCommandClassNetworkManagementPrimary(List<int> data) {
+  T? handleCommandClassNetworkManagementPrimary(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_NETWORK_MANAGEMENT_PRIMARY,
         'COMMAND_CLASS_NETWORK_MANAGEMENT_PRIMARY', data);
   }
 
-  T handleCommandClassNetworkManagementProxy(List<int> data) {
+  T? handleCommandClassNetworkManagementProxy(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_NETWORK_MANAGEMENT_PROXY,
         'COMMAND_CLASS_NETWORK_MANAGEMENT_PROXY', data);
   }
 
-  T handleCommandClassNodeNaming(List<int> data) {
+  T? handleCommandClassNodeNaming(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_NODE_NAMING, 'COMMAND_CLASS_NODE_NAMING', data);
   }
 
-  T handleCommandClassNodeProvisioning(List<int> data) {
+  T? handleCommandClassNodeProvisioning(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_NODE_PROVISIONING,
         'COMMAND_CLASS_NODE_PROVISIONING', data);
   }
 
-  T handleCommandClassNotification(List<int> data) {
+  T? handleCommandClassNotification(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_NOTIFICATION, 'COMMAND_CLASS_NOTIFICATION', data);
   }
 
-  T handleCommandClassNoOperation(List<int> data) {
+  T? handleCommandClassNoOperation(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_NO_OPERATION, 'COMMAND_CLASS_NO_OPERATION', data);
   }
 
-  T handleCommandClassPowerlevel(List<int> data) {
+  T? handleCommandClassPowerlevel(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_POWERLEVEL, 'COMMAND_CLASS_POWERLEVEL', data);
   }
 
-  T handleCommandClassPrepayment(List<int> data) {
+  T? handleCommandClassPrepayment(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_PREPAYMENT, 'COMMAND_CLASS_PREPAYMENT', data);
   }
 
-  T handleCommandClassPrepaymentEncapsulation(List<int> data) {
+  T? handleCommandClassPrepaymentEncapsulation(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_PREPAYMENT_ENCAPSULATION,
         'COMMAND_CLASS_PREPAYMENT_ENCAPSULATION', data);
   }
 
-  T handleCommandClassProprietary(List<int> data) {
+  T? handleCommandClassProprietary(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_PROPRIETARY, 'COMMAND_CLASS_PROPRIETARY', data);
   }
 
-  T handleCommandClassProtection(List<int> data) {
+  T? handleCommandClassProtection(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_PROTECTION, 'COMMAND_CLASS_PROTECTION', data);
   }
 
-  T handleCommandClassRateTblConfig(List<int> data) {
+  T? handleCommandClassRateTblConfig(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_RATE_TBL_CONFIG, 'COMMAND_CLASS_RATE_TBL_CONFIG', data);
   }
 
-  T handleCommandClassRateTblMonitor(List<int> data) {
+  T? handleCommandClassRateTblMonitor(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_RATE_TBL_MONITOR, 'COMMAND_CLASS_RATE_TBL_MONITOR', data);
   }
 
-  T handleCommandClassRemoteAssociation(List<int> data) {
+  T? handleCommandClassRemoteAssociation(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_REMOTE_ASSOCIATION,
         'COMMAND_CLASS_REMOTE_ASSOCIATION', data);
   }
 
-  T handleCommandClassRemoteAssociationActivate(List<int> data) {
+  T? handleCommandClassRemoteAssociationActivate(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_REMOTE_ASSOCIATION_ACTIVATE,
         'COMMAND_CLASS_REMOTE_ASSOCIATION_ACTIVATE', data);
   }
 
-  T handleCommandClassSceneActivation(List<int> data) {
+  T? handleCommandClassSceneActivation(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SCENE_ACTIVATION, 'COMMAND_CLASS_SCENE_ACTIVATION', data);
   }
 
-  T handleCommandClassSceneActuatorConf(List<int> data) {
+  T? handleCommandClassSceneActuatorConf(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SCENE_ACTUATOR_CONF,
         'COMMAND_CLASS_SCENE_ACTUATOR_CONF', data);
   }
 
-  T handleCommandClassSceneControllerConf(List<int> data) {
+  T? handleCommandClassSceneControllerConf(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SCENE_CONTROLLER_CONF,
         'COMMAND_CLASS_SCENE_CONTROLLER_CONF', data);
   }
 
-  T handleCommandClassSchedule(List<int> data) {
+  T? handleCommandClassSchedule(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SCHEDULE, 'COMMAND_CLASS_SCHEDULE', data);
   }
 
-  T handleCommandClassScheduleEntryLock(List<int> data) {
+  T? handleCommandClassScheduleEntryLock(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SCHEDULE_ENTRY_LOCK,
         'COMMAND_CLASS_SCHEDULE_ENTRY_LOCK', data);
   }
 
-  T handleCommandClassScreenAttributes(List<int> data) {
+  T? handleCommandClassScreenAttributes(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SCREEN_ATTRIBUTES,
         'COMMAND_CLASS_SCREEN_ATTRIBUTES', data);
   }
 
-  T handleCommandClassScreenMd(List<int> data) {
+  T? handleCommandClassScreenMd(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SCREEN_MD, 'COMMAND_CLASS_SCREEN_MD', data);
   }
 
-  T handleCommandClassSecurity(List<int> data) {
+  T? handleCommandClassSecurity(List<int> data) {
     switch (data[8]) {
       case SECURITY_NONCE_REPORT:
         return handleSecurityNonceReport(SecurityNonceReport(data));
@@ -677,27 +677,27 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleSecurityNonceReport(SecurityNonceReport report) {
+  T? handleSecurityNonceReport(SecurityNonceReport report) {
     logger.warning('Unhandled SecurityNonceReport from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassSecurity2(List<int> data) {
+  T? handleCommandClassSecurity2(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SECURITY_2, 'COMMAND_CLASS_SECURITY_2', data);
   }
 
-  T handleCommandClassSecurityScheme0Mark(List<int> data) {
+  T? handleCommandClassSecurityScheme0Mark(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SECURITY_SCHEME0_MARK,
         'COMMAND_CLASS_SECURITY_SCHEME0_MARK', data);
   }
 
-  T handleCommandClassSensorAlarm(List<int> data) {
+  T? handleCommandClassSensorAlarm(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SENSOR_ALARM, 'COMMAND_CLASS_SENSOR_ALARM', data);
   }
 
-  T handleCommandClassSensorBinary(List<int> data) {
+  T? handleCommandClassSensorBinary(List<int> data) {
     switch (data[8]) {
       case SENSOR_BINARY_REPORT:
         return handleSensorBinaryReport(SensorBinaryReport(data));
@@ -707,17 +707,17 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleSensorBinaryReport(SensorBinaryReport report) {
+  T? handleSensorBinaryReport(SensorBinaryReport report) {
     logger.warning('Unhandled SensorBinaryReport from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassSensorConfiguration(List<int> data) {
+  T? handleCommandClassSensorConfiguration(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SENSOR_CONFIGURATION,
         'COMMAND_CLASS_SENSOR_CONFIGURATION', data);
   }
 
-  T handleCommandClassSensorMultilevel(List<int> data) {
+  T? handleCommandClassSensorMultilevel(List<int> data) {
     switch (data[8]) {
       case SENSOR_MULTILEVEL_REPORT:
         return handleSensorMultilevelReport(SensorMultilevelReport(data));
@@ -727,183 +727,183 @@ abstract class ApplicationCommandHandlerBase<T> {
     }
   }
 
-  T handleSensorMultilevelReport(SensorMultilevelReport report) {
+  T? handleSensorMultilevelReport(SensorMultilevelReport report) {
     logger
         .warning('Unhandled SensorMultilevelReport from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassSilenceAlarm(List<int> data) {
+  T? handleCommandClassSilenceAlarm(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SILENCE_ALARM, 'COMMAND_CLASS_SILENCE_ALARM', data);
   }
 
-  T handleCommandClassSimpleAvControl(List<int> data) {
+  T? handleCommandClassSimpleAvControl(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SIMPLE_AV_CONTROL,
         'COMMAND_CLASS_SIMPLE_AV_CONTROL', data);
   }
 
-  T handleCommandClassSoundSwitch(List<int> data) {
+  T? handleCommandClassSoundSwitch(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SOUND_SWITCH, 'COMMAND_CLASS_SOUND_SWITCH', data);
   }
 
-  T handleCommandClassSupervision(List<int> data) {
+  T? handleCommandClassSupervision(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SUPERVISION, 'COMMAND_CLASS_SUPERVISION', data);
   }
 
-  T handleCommandClassSwitchAll(List<int> data) {
+  T? handleCommandClassSwitchAll(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SWITCH_ALL, 'COMMAND_CLASS_SWITCH_ALL', data);
   }
 
-  T handleCommandClassSwitchBinary(List<int> data) {
+  T? handleCommandClassSwitchBinary(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SWITCH_BINARY, 'COMMAND_CLASS_SWITCH_BINARY', data);
   }
 
-  T handleCommandClassSwitchColor(List<int> data) {
+  T? handleCommandClassSwitchColor(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_SWITCH_COLOR, 'COMMAND_CLASS_SWITCH_COLOR', data);
   }
 
-  T handleCommandClassSwitchMultilevel(List<int> data) {
+  T? handleCommandClassSwitchMultilevel(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SWITCH_MULTILEVEL,
         'COMMAND_CLASS_SWITCH_MULTILEVEL', data);
   }
 
-  T handleCommandClassSwitchToggleBinary(List<int> data) {
+  T? handleCommandClassSwitchToggleBinary(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SWITCH_TOGGLE_BINARY,
         'COMMAND_CLASS_SWITCH_TOGGLE_BINARY', data);
   }
 
-  T handleCommandClassSwitchToggleMultilevel(List<int> data) {
+  T? handleCommandClassSwitchToggleMultilevel(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_SWITCH_TOGGLE_MULTILEVEL,
         'COMMAND_CLASS_SWITCH_TOGGLE_MULTILEVEL', data);
   }
 
-  T handleCommandClassTariffConfig(List<int> data) {
+  T? handleCommandClassTariffConfig(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_TARIFF_CONFIG, 'COMMAND_CLASS_TARIFF_CONFIG', data);
   }
 
-  T handleCommandClassTariffTblMonitor(List<int> data) {
+  T? handleCommandClassTariffTblMonitor(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_TARIFF_TBL_MONITOR,
         'COMMAND_CLASS_TARIFF_TBL_MONITOR', data);
   }
 
-  T handleCommandClassThermostatFanMode(List<int> data) {
+  T? handleCommandClassThermostatFanMode(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_FAN_MODE,
         'COMMAND_CLASS_THERMOSTAT_FAN_MODE', data);
   }
 
-  T handleCommandClassThermostatFanState(List<int> data) {
+  T? handleCommandClassThermostatFanState(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_FAN_STATE,
         'COMMAND_CLASS_THERMOSTAT_FAN_STATE', data);
   }
 
-  T handleCommandClassThermostatMode(List<int> data) {
+  T? handleCommandClassThermostatMode(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_THERMOSTAT_MODE, 'COMMAND_CLASS_THERMOSTAT_MODE', data);
   }
 
-  T handleCommandClassThermostatOperatingState(List<int> data) {
+  T? handleCommandClassThermostatOperatingState(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_OPERATING_STATE,
         'COMMAND_CLASS_THERMOSTAT_OPERATING_STATE', data);
   }
 
-  T handleCommandClassThermostatSetback(List<int> data) {
+  T? handleCommandClassThermostatSetback(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_SETBACK,
         'COMMAND_CLASS_THERMOSTAT_SETBACK', data);
   }
 
-  T handleCommandClassThermostatSetpoint(List<int> data) {
+  T? handleCommandClassThermostatSetpoint(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_SETPOINT,
         'COMMAND_CLASS_THERMOSTAT_SETPOINT', data);
   }
 
-  T handleCommandClassTime(List<int> data) {
+  T? handleCommandClassTime(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_TIME, 'COMMAND_CLASS_TIME', data);
   }
 
-  T handleCommandClassTimeParameters(List<int> data) {
+  T? handleCommandClassTimeParameters(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_TIME_PARAMETERS, 'COMMAND_CLASS_TIME_PARAMETERS', data);
   }
 
-  T handleCommandClassTransportService(List<int> data) {
+  T? handleCommandClassTransportService(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_TRANSPORT_SERVICE,
         'COMMAND_CLASS_TRANSPORT_SERVICE', data);
   }
 
-  T handleCommandClassUserCode(List<int> data) {
+  T? handleCommandClassUserCode(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_USER_CODE, 'COMMAND_CLASS_USER_CODE', data);
   }
 
-  T handleCommandClassVersion(List<int> data) {
+  T? handleCommandClassVersion(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_VERSION, 'COMMAND_CLASS_VERSION', data);
   }
 
-  T handleCommandClassWakeUp(List<int> data) {
+  T? handleCommandClassWakeUp(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_WAKE_UP, 'COMMAND_CLASS_WAKE_UP', data);
   }
 
-  T handleCommandClassWindowCovering(List<int> data) {
+  T? handleCommandClassWindowCovering(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_WINDOW_COVERING, 'COMMAND_CLASS_WINDOW_COVERING', data);
   }
 
-  T handleCommandClassZip(List<int> data) {
+  T? handleCommandClassZip(List<int> data) {
     return unhandledCommandClass(COMMAND_CLASS_ZIP, 'COMMAND_CLASS_ZIP', data);
   }
 
-  T handleCommandClassZip6lowpan(List<int> data) {
+  T? handleCommandClassZip6lowpan(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZIP_6LOWPAN, 'COMMAND_CLASS_ZIP_6LOWPAN', data);
   }
 
-  T handleCommandClassZipGateway(List<int> data) {
+  T? handleCommandClassZipGateway(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZIP_GATEWAY, 'COMMAND_CLASS_ZIP_GATEWAY', data);
   }
 
-  T handleCommandClassZipNaming(List<int> data) {
+  T? handleCommandClassZipNaming(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZIP_NAMING, 'COMMAND_CLASS_ZIP_NAMING', data);
   }
 
-  T handleCommandClassZipNd(List<int> data) {
+  T? handleCommandClassZipNd(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZIP_ND, 'COMMAND_CLASS_ZIP_ND', data);
   }
 
-  T handleCommandClassZipPortal(List<int> data) {
+  T? handleCommandClassZipPortal(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZIP_PORTAL, 'COMMAND_CLASS_ZIP_PORTAL', data);
   }
 
-  T handleCommandClassZwaveplusInfo(List<int> data) {
+  T? handleCommandClassZwaveplusInfo(List<int> data) {
     return unhandledCommandClass(
         COMMAND_CLASS_ZWAVEPLUS_INFO, 'COMMAND_CLASS_ZWAVEPLUS_INFO', data);
   }
 
-  T handleNetworkManagementInstallationMaintenance(List<int> data) {
+  T? handleNetworkManagementInstallationMaintenance(List<int> data) {
     return unhandledCommandClass(NETWORK_MANAGEMENT_INSTALLATION_MAINTENANCE,
         'NETWORK_MANAGEMENT_INSTALLATION_MAINTENANCE', data);
   }
 
-  T handleUnknownCommandClassId(int cmdId, List<int> data) {
+  T? handleUnknownCommandClassId(int cmdId, List<int> data) {
     final nodeId = data[5];
     logger.warning('Unknown command class id: $nodeId $cmdId $data');
     return null;
   }
 
-  T unhandledCommandClass(int cmdId, String cmdName, List<int> data) {
+  T? unhandledCommandClass(int cmdId, String cmdName, List<int> data) {
     final nodeId = data[5];
     logger.warning('Unhandled command: $nodeId $cmdId $cmdName $data');
     return null;

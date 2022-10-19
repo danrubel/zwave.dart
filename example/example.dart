@@ -23,7 +23,7 @@ class Example {
   // Change `9` to the node id of your wall switch or switched outlet
   final lamp = WallSwitch(9, 'living room', 'lamp');
 
-  Example(this.port) : manager = ZwManager(port.driver) {
+  Example(this.port) : manager = ZwManager(port.driver!) {
     manager.add(lamp);
   }
 

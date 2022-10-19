@@ -11,35 +11,35 @@ typedef MessageHandler = void Function(List<int> data);
 /// are automatically sent and higher level message data is forwarded
 /// to the provided request/response handlers.
 class ZwDriver implements ZwDecodeListener {
-  final void Function(List<int> data) _sendData;
+  final void Function(List<int?>? data) _sendData;
   final Duration sendTimeout;
 
   /// [requestHandler] processes requests
   /// sent from the Z-Wave controller or from physical devices in the network.
-  MessageHandler requestHandler;
+  MessageHandler? requestHandler;
 
   /// [defaultResponseHandler] processes responses
   /// sent from the Z-Wave controller or from physical devices in the network.
   /// If a response handler is specified when [send] is called, then
   /// that handler (rather than this handler) will receive the next response.
   /// This handler will receive any subsequent responses.
-  MessageHandler defaultResponseHandler;
+  MessageHandler? defaultResponseHandler;
 
-  Completer<void> _sendCompleter;
-  Completer<List<int>> _responseCompleter;
-  Timer _responseTimer;
+  Completer<void>? _sendCompleter;
+  Completer<List<int>>? _responseCompleter;
+  Timer? _responseTimer;
 
   int _handleRequestExceptionCount = 0;
   int _handleDefaultResponseExceptionCount = 0;
 
-  ZwDriver(this._sendData, {int sendTimeoutMsForTesting})
+  ZwDriver(this._sendData, {int? sendTimeoutMsForTesting})
       : sendTimeout = Duration(milliseconds: sendTimeoutMsForTesting ?? 1600);
 
   /// Send the specified message and return a [Future]
   /// that completes when the message is acknowledged
   /// or completes with an error if the message is canceled or corrupted.
-  Future<void> send(List<int> data,
-      {Completer<List<int>> responseCompleter, Duration responseTimeout}) {
+  Future<void> send(List<int?>? data,
+      {Completer<List<int>>? responseCompleter, Duration? responseTimeout}) {
     if (data == null || data.isEmpty) _error('invalid data');
     if (responseCompleter != null && responseTimeout == null)
       _error('must specify responseTimeout with responseCompleter');
@@ -53,7 +53,7 @@ class ZwDriver implements ZwDecodeListener {
 
     // From section 6.2.2 of the Serial API Host Appl. Prg. Guide
     // Data frame sender timeout is 1600 ms
-    return _sendCompleter.future.timeout(sendTimeout, onTimeout: () {
+    return _sendCompleter!.future.timeout(sendTimeout, onTimeout: () {
       _logger.warning('send timeout $data');
       _sendCompleter = null;
       _responseCompleter = null;
@@ -63,7 +63,7 @@ class ZwDriver implements ZwDecodeListener {
       if (_responseCompleter != null && responseTimeout != null) {
         _responseTimer = Timer(responseTimeout, () {
           _logger.warning('response timeout $data');
-          _responseCompleter.completeError(ZwException.responseTimeout);
+          _responseCompleter!.completeError(ZwException.responseTimeout);
           _responseCompleter = null;
           _responseTimer = null;
         });
@@ -86,7 +86,7 @@ class ZwDriver implements ZwDecodeListener {
   @override
   void handleAck() {
     if (_sendCompleter != null) {
-      _sendCompleter.complete();
+      _sendCompleter!.complete();
       _sendCompleter = null;
     } else {
       _logger.warning('unexpected ACK');
@@ -134,7 +134,7 @@ class ZwDriver implements ZwDecodeListener {
   void _handleRequest(List<int> dataFrame) {
     if (requestHandler != null) {
       try {
-        requestHandler(dataFrame);
+        requestHandler!(dataFrame);
       } catch (error, trace) {
         ++_handleRequestExceptionCount;
         _logger.warning(
@@ -152,11 +152,11 @@ class ZwDriver implements ZwDecodeListener {
     if (_responseCompleter != null) {
       _responseTimer?.cancel();
       _responseTimer = null;
-      _responseCompleter.complete(dataFrame);
+      _responseCompleter!.complete(dataFrame);
       _responseCompleter = null;
     } else if (defaultResponseHandler != null) {
       try {
-        defaultResponseHandler(dataFrame);
+        defaultResponseHandler!(dataFrame);
       } catch (error, trace) {
         ++_handleDefaultResponseExceptionCount;
         _logger.warning(
@@ -178,7 +178,7 @@ class ZwDriver implements ZwDecodeListener {
 
   void _errorWaitingForAck(ZwException exception) {
     _logger.warning(exception.message);
-    _sendCompleter.completeError(exception);
+    _sendCompleter!.completeError(exception);
     _sendCompleter = null;
     _responseCompleter = null;
     _responseTimer?.cancel();

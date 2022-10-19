@@ -8,11 +8,11 @@ import 'package:zwave/zw_manager.dart';
 Future<void> main(List<String> args) async {
   setupLogger();
 
-  String zwaveDevicePath = getZWaveDevicePath(args);
+  String? zwaveDevicePath = getZWaveDevicePath(args);
   Logger.root.fine('starting...');
 
   final port = RpiZwPort();
-  final manager = ZwManager(port.driver);
+  final manager = ZwManager(port.driver!);
 
   Logger.root.config('opening Z-Wave port: ${args[0]}');
   await port.open(zwaveDevicePath);
@@ -28,7 +28,7 @@ Future<void> main(List<String> args) async {
   Logger.root.config('exiting');
 }
 
-String getZWaveDevicePath(List<String> args) {
+String? getZWaveDevicePath(List<String> args) {
   if (args.isNotEmpty) {
     return args[0];
   }
@@ -41,12 +41,11 @@ String getZWaveDevicePath(List<String> args) {
               f.uri.pathSegments.last.startsWith('ttyU')))
       .map((f) => f.path)
       .toList()
-        ..sort();
+    ..sort();
   if (deviceFiles.isNotEmpty) {
     print('  perhaps one of ${deviceFiles.join(', ')} ?');
   }
   exit(1);
-  return null;
 }
 
 void setupLogger() {

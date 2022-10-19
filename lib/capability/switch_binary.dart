@@ -9,7 +9,7 @@ import 'package:zwave/report/zw_command_class_report.dart';
 abstract class SwitchBinary implements ZwNodeMixin {
   /// `true` if the switch is on, `false` if it is off,
   /// or `null` if the current state is unknown.
-  bool state;
+  bool? state;
 
   /// The % which the switch is on where
   /// 0x00       = off
@@ -17,14 +17,14 @@ abstract class SwitchBinary implements ZwNodeMixin {
   /// 0xFF       = fully on
   /// null       = unknown
   /// Non-dimmable switches will only have values 0x00 and 0xFF.
-  int stateValue;
+  int? stateValue;
 
   void handleCommandClassSwitchBinary(List<int> data) {
     switch (data[8]) {
       case SWITCH_BINARY_REPORT:
         final report = SwitchBinaryReport(data);
         stateValue = report.value;
-        state = stateValue > 0;
+        state = stateValue! > 0;
         processedResult<SwitchBinaryReport>(report);
         return;
       default:
@@ -37,7 +37,7 @@ abstract class SwitchBinary implements ZwNodeMixin {
   /// Return true if the request was successful, else false.
   Future<void> requestState() async {
     SwitchBinaryReport report =
-        await commandHandler.request(ZwRequest<SwitchBinaryReport>(
+        await commandHandler!.request(ZwRequest<SwitchBinaryReport>(
       logger,
       id,
       buildSendDataRequest(id, [
@@ -48,14 +48,14 @@ abstract class SwitchBinary implements ZwNodeMixin {
       resultKey: SwitchBinaryReport,
     ));
     stateValue = report.value;
-    state = stateValue > 0;
-    return true;
+    state = stateValue! > 0;
+    return;
   }
 
   /// Set the current state of the switch.
   Future<void> setState(bool newState) async {
     final newStateValue = newState ? 0xFF : 0x00;
-    await commandHandler.request(ZwRequest<void>(
+    await commandHandler!.request(ZwRequest<void>(
       logger,
       id,
       buildSendDataRequest(id, [
@@ -70,9 +70,13 @@ abstract class SwitchBinary implements ZwNodeMixin {
 
   /// Set the current state of the switch as a percent.
   Future<void> setStateValue(int value) async {
-    final newStateValue = value <= 0 ? 0 : value <= 0x63 ? value : 0xFF;
+    final newStateValue = value <= 0
+        ? 0
+        : value <= 0x63
+            ? value
+            : 0xFF;
     final newState = value > 0;
-    await commandHandler.request(ZwRequest<void>(
+    await commandHandler!.request(ZwRequest<void>(
       logger,
       id,
       buildSendDataRequest(id, [

@@ -10,5 +10,5 @@ class SensorBinaryReport extends ZwCommandClassReport {
   int get value => data[9];
 
   // optional
-  int get type => data.length > 11 ? data[10] : null;
+  int? get type => data.length > 11 ? data[10] : null;
 }

@@ -9,7 +9,7 @@ void main() {
 }
 
 class NodeNamingTest extends ZwRequestTest {
-  TestNodeNamingNode node;
+  late TestNodeNamingNode node;
 
   @override
   void defineTests() {
@@ -28,7 +28,7 @@ class NodeNamingTest extends ZwRequestTest {
         expect(node.name, isNull);
         expect(node.location, isNull);
         expectingRequestResult(getNameRequest, getNameResult);
-        String result;
+        String? result;
         result = await node.requestNodeName();
         expect(result, 'lamp');
         expect(node.name, 'lamp');
@@ -56,7 +56,7 @@ class NodeNamingTest extends ZwRequestTest {
         expect(node.name, isNull);
         expect(node.location, isNull);
         expectingRequestResult(getLocationRequest, getLocationResult);
-        String result = await node.requestNodeLocation();
+        String? result = await node.requestNodeLocation();
         expect(result, 'living room');
         expect(node.name, isNull);
         expect(node.location, 'living room');

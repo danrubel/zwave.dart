@@ -8,7 +8,7 @@ main() {
 }
 
 class NetworkManagementProxyTest extends ZwRequestTest {
-  NetworkManagementProxy controller;
+  NetworkManagementProxy? controller;
 
   @override
   void defineTests() {

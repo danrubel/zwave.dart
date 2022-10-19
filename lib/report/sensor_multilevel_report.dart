@@ -21,12 +21,12 @@ class SensorMultilevelReport extends ZwCommandClassReport {
 
   /// Return a human readable value with units
   String get valueWithUnits {
-    String text = units;
+    String? text = units;
     return text != null ? '$value $text' : '$value';
   }
 
   /// Return human readable units or `null` if unknown
-  String get units {
+  String? get units {
     switch (type) {
       case SENSOR_MULTILEVEL_AIR_TEMPERATURE:
         switch (scale) {

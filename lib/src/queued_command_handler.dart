@@ -20,12 +20,12 @@ class QueuedCommandHandler implements CommandHandler {
     return request.completer.future;
   }
 
-  Future<void> sendQueuedCommands(CommandHandler commandHandler) async {
+  Future<void> sendQueuedCommands(CommandHandler? commandHandler) async {
     while (_queue.isNotEmpty) {
-      await commandHandler.send(_queue.removeAt(0));
+      await commandHandler!.send(_queue.removeAt(0));
     }
     while (_queuedRequests.isNotEmpty) {
-      await commandHandler.request(_queuedRequests.removeAt(0));
+      await commandHandler!.request(_queuedRequests.removeAt(0));
     }
   }
 }

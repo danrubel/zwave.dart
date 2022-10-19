@@ -130,7 +130,7 @@ class _Writer {
   final List<int> orig;
   final buf = StringBuffer();
   int index = -1;
-  int currentValue;
+  int? currentValue;
 
   _Writer(this.orig);
 
@@ -142,7 +142,7 @@ class _Writer {
     comment(currentValue == 1 ? 'SOF' : '??? expected SOF 0x01');
     if (!writeByte()) return false;
     comment('length ${currentValue} excluding SOF and checksum');
-    int expLen = currentValue + 2;
+    int expLen = currentValue! + 2;
     if (expLen != orig.length) comment('expected $expLen bytes in packet');
     if (!writeByte()) return false;
     commentAt(['request', 'response'], currentValue, '???');
@@ -158,7 +158,7 @@ class _Writer {
     comment('source node $currentValue');
     if (!writeByte()) return false;
     comment('command length $currentValue');
-    int cmdLen = currentValue;
+    int cmdLen = currentValue!;
     var expLen = cmdLen + 1;
     if (expLen != bytesLeft) {
       comment('expected $expLen more bytes');
@@ -167,7 +167,7 @@ class _Writer {
     var cmdClassId = currentValue;
     commentKey(COMMAND_CLASS_NAMES, cmdClassId, 'COMMAND_CLASS_???');
     if (!writeByte()) return false;
-    commentKey(COMMAND_NAMES[cmdClassId], currentValue);
+    commentKey(COMMAND_NAMES[cmdClassId!], currentValue);
     return true;
   }
 
@@ -179,9 +179,9 @@ class _Writer {
     comment('source node $currentValue');
     if (!writeByte()) return false;
     comment('command length $currentValue');
-    int cmdLen = currentValue;
+    int? cmdLen = currentValue;
     if (!isNoOp) {
-      var expLen = cmdLen + 2;
+      var expLen = cmdLen! + 2;
       if (expLen != bytesLeft) {
         comment('expected $expLen more bytes');
       }
@@ -191,7 +191,7 @@ class _Writer {
     commentKey(COMMAND_CLASS_NAMES, cmdClassId, 'COMMAND_CLASS_???');
     if (isNoOp) return true;
     if (!writeByte()) return false;
-    commentKey(COMMAND_NAMES[cmdClassId], currentValue);
+    commentKey(COMMAND_NAMES[cmdClassId!], currentValue);
     return true;
   }
 
@@ -205,7 +205,7 @@ class _Writer {
 
     var options = StringBuffer();
     addOption(int bitMask, String name) {
-      if (currentValue & bitMask == 0) return;
+      if (currentValue! & bitMask == 0) return;
       if (options.isNotEmpty) options.write(', ');
       options.write(name);
     }
@@ -232,24 +232,24 @@ class _Writer {
     ++index;
     currentValue = orig[index];
     buf.write(' 0x');
-    buf.write(currentValue.toRadixString(16).toUpperCase().padLeft(2, '0'));
+    buf.write(currentValue!.toRadixString(16).toUpperCase().padLeft(2, '0'));
     buf.write(',');
     return true;
   }
 
-  void comment(String text) {
+  void comment(String? text) {
     buf.writeln(text != null ? ' // $text' : '');
   }
 
-  void commentAt(List<String> textList, int index, [String defaultText]) {
-    comment(textList != null && index < textList.length
+  void commentAt(List<String> textList, int? index, [String? defaultText]) {
+    comment(textList != null && index! < textList.length
         ? textList[index]
         : defaultText);
   }
 
-  void commentKey(Map<int, String> textMap, int index, [String defaultText]) {
+  void commentKey(Map<int, String>? textMap, int? index, [String? defaultText]) {
     comment(textMap != null && textMap.containsKey(index)
-        ? textMap[index]
+        ? textMap[index!]
         : defaultText);
   }
 

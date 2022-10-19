@@ -8,11 +8,11 @@ import 'package:zwave/report/zw_command_class_report.dart';
 /// A node that has a battery and supports [COMMAND_CLASS_BATTERY].
 abstract class Battery implements ZwNodeMixin {
   /// The last battery report or `null` if none.
-  BatteryReport battery;
+  BatteryReport? battery;
 
   /// Return a [Future] that completes with a current battery report.
   Future<BatteryReport> requestBattery() {
-    return commandHandler.request(ZwRequest<BatteryReport>(logger, id,
+    return commandHandler!.request(ZwRequest<BatteryReport>(logger, id,
         buildSendDataRequest(id, const [COMMAND_CLASS_BATTERY, BATTERY_GET]),
         processResponse: (data) => battery = BatteryReport(data),
         resultKey: BatteryReport));

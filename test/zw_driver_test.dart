@@ -1,16 +1,16 @@
 import 'dart:async';
 
+import 'package:test/test.dart';
 import 'package:zwave/message_consts.dart';
 import 'package:zwave/src/zw_decoder.dart';
 import 'package:zwave/zw_driver.dart';
 import 'package:zwave/zw_exception.dart';
-import 'package:test/test.dart';
 
 main() {
-  ZwDriver driver;
-  TestHandler requestHandler;
-  TestHandler defaultResponseHandler;
-  TestPort port;
+  late ZwDriver driver;
+  late TestHandler requestHandler;
+  late TestHandler defaultResponseHandler;
+  late TestPort port;
 
   void expectComplete() {
     expect(requestHandler.expectedData, isNull);
@@ -173,10 +173,10 @@ const versionRequest = <int>[
 ];
 
 class TestPort {
-  final expectedMessages = <List<int>>[];
+  final List<List<int?>> expectedMessages = <List<int>>[];
   final responses = <void Function()>[];
 
-  void sendData(List<int> data) {
+  void sendData(List<int?>? data) {
     if (expectedMessages.isEmpty) fail('unexpected send: $data');
     final expectedMsg = expectedMessages.removeAt(0);
     expect(data, equals(expectedMsg));
@@ -191,7 +191,7 @@ class TestPort {
 }
 
 class TestHandler {
-  List<int> expectedData;
+  List<int>? expectedData;
 
   void process(List<int> data) {
     if (expectedData == null) fail('unexpected data: $data');

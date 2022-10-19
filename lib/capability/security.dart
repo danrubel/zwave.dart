@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart' show IterableExtension;
 import 'package:logging/logging.dart';
 import 'package:zwave/capability/zw_node_mixin.dart';
 import 'package:zwave/command/zw_request.dart';
@@ -12,12 +13,12 @@ import 'package:zwave/report/zw_command_class_report.dart';
 mixin Security implements ZwNodeMixin {
   final _nonces = <Nonce>[];
 
-  Nonce generateNonce() {
+  Nonce? generateNonce() {
     while (true) {
       Nonce nonce = Nonce.generate();
-      int key = nonce.key;
+      int? key = nonce.key;
       // Newly generated nonce must have a unique key
-      if (_nonces.firstWhere((n) => n.key == key, orElse: () => null) != null) {
+      if (_nonces.firstWhereOrNull((n) => n.key == key) != null) {
         continue;
       }
       if (_nonces.length >= 8) _nonces.removeLast();
@@ -49,25 +50,25 @@ mixin Security implements ZwNodeMixin {
   }
 
   void sendNonceReport(int desinationNodeId) {
-    var data = buildSendDataResponse(desinationNodeId, <int>[
+    var data = buildSendDataResponse(desinationNodeId, <int?>[
       COMMAND_CLASS_SECURITY,
       SECURITY_NONCE_REPORT,
-      ...generateNonce().values,
+      ...generateNonce()!.values,
     ]);
-    commandHandler.request(ZwRequest<void>(logger, desinationNodeId, data));
+    commandHandler!.request(ZwRequest<void>(logger, desinationNodeId, data));
   }
 }
 
 /// A number used once (nonce).
 class Nonce {
-  final List<int> values;
+  final List<int?> values;
 
-  int get key => values[0];
+  int? get key => values[0];
 
   Nonce(this.values) : assert(values.length == 8);
 
   factory Nonce.generate() {
-    final values = List<int>(8);
+    final values = <int?>[8];
     // First byte must be non-zero
     values[0] = _random.nextInt(0xFF) + 1;
     for (int index = 1; index < 8; ++index) {
@@ -77,7 +78,7 @@ class Nonce {
   }
 }
 
-Random _r;
+Random? _r;
 Random get _random {
   try {
     return _r ??= Random.secure();

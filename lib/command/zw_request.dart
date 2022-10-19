@@ -7,18 +7,18 @@ import 'package:zwave/src/zw_decoder.dart';
 import 'package:zwave/zw_message.dart';
 
 class ZwRequest<T> extends ZwMessage {
-  final Logger logger;
-  final int nodeId;
-  final List<int> data;
-  final T Function(List<int> data) processResponse;
+  final Logger? logger;
+  final int? nodeId;
+  final List<int?>? data;
+  final T Function(List<int> data)? processResponse;
   final Duration responseTimeout;
-  final Object resultKey;
+  final Object? resultKey;
   final Duration resultTimeout;
   final completer = Completer<T>();
 
   /// Used by [ZwManager] to cache the time at which the manager
   /// should stop waiting for a result/response from the device.
-  DateTime resultEndTime;
+  DateTime? resultEndTime;
 
   /// Construct a request to be sent to a device.
   ///
@@ -45,25 +45,25 @@ class ZwRequest<T> extends ZwMessage {
         'must specify resultTimeout with resultKey');
   }
 
-  int get functId => data[3];
+  int? get functId => data![3];
 
   _validate(bool condition, String message) {
     if (condition) return;
-    logger.warning(message);
+    logger!.warning(message);
     throw message;
   }
 }
 
 /// Calculate and append checksum
-void appendCrc(List<int> data) {
+void appendCrc(List<int?> data) {
   int crc = 0xFF;
-  for (int index = 1; index < data.length; ++index) crc ^= data[index];
+  for (int index = 1; index < data.length; ++index) crc ^= data[index]!;
   data.add(crc);
 }
 
 Iterable<int> buildAsciiChars(String text) {
   int length = text.length;
-  final result = List<int>(length);
+  final result = <int>[length];
   for (int index = 0; index < length; ++index) {
     int codeUnit = text.codeUnitAt(index);
     if (codeUnit > 0x7F) codeUnit = '_'.codeUnitAt(0);
@@ -73,16 +73,17 @@ Iterable<int> buildAsciiChars(String text) {
 }
 
 /// Return message data for a zwave function request
-List<int> buildFunctRequest(int functId, [List<int> functParam]) =>
+List<int?> buildFunctRequest(int functId, [List<int?>? functParam]) =>
     buildFunctMessage(REQ_TYPE, functId, functParam);
 
 /// Return message data for a zwave function response
-List<int> buildFunctResponse(int functId, [List<int> functParam]) =>
+List<int?> buildFunctResponse(int functId, [List<int>? functParam]) =>
     buildFunctMessage(RES_TYPE, functId, functParam);
 
 /// Return data for a zwave function message
-List<int> buildFunctMessage(int frameType, int functId, List<int> functParam) {
-  var data = <int>[
+List<int?> buildFunctMessage(
+    int frameType, int functId, List<int?>? functParam) {
+  var data = <int?>[
     SOF, // start of frame
     3, // length
     frameType, // request
@@ -101,21 +102,21 @@ List<int> buildFunctMessage(int frameType, int functId, List<int> functParam) {
 }
 
 /// Return message data for a zwave send data command request
-List<int> buildSendDataRequest(int nodeId, List<int> cmdData,
-    {int transmitOptions}) =>
+List<int?> buildSendDataRequest(int nodeId, List<int?> cmdData,
+        {int? transmitOptions}) =>
     buildSendDataMessage(REQ_TYPE, nodeId, cmdData,
         transmitOptions: transmitOptions);
 
 /// Return message data for a zwave send data command response
-List<int> buildSendDataResponse(int nodeId, List<int> cmdData,
-    {int transmitOptions}) =>
+List<int?> buildSendDataResponse(int nodeId, List<int?> cmdData,
+        {int? transmitOptions}) =>
     buildSendDataMessage(RES_TYPE, nodeId, cmdData,
         transmitOptions: transmitOptions);
 
 /// Return data for a zwave send data command message
-List<int> buildSendDataMessage(int frameType, int nodeId, List<int> cmdData,
-    {int transmitOptions}) {
-  final functParam = <int>[
+List<int?> buildSendDataMessage(int frameType, int nodeId, List<int?> cmdData,
+    {int? transmitOptions}) {
+  final functParam = <int?>[
     nodeId,
     cmdData.length,
   ];

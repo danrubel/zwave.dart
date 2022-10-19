@@ -22,7 +22,7 @@ class TestCommandHandler implements CommandHandler {
     final expectedData = expected.removeAt(0);
     expect(data, equals(expectedData), reason: 'request');
 
-    command.responseCompleter.complete(responses.removeAt(0));
+    command.responseCompleter!.complete(responses.removeAt(0));
   }
 }
 

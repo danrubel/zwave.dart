@@ -11,11 +11,11 @@ import 'zw_driver_test.dart';
 
 /// Common infrastructure for testing zwave request/response/result.
 abstract class ZwRequestTest {
-  ZwDriver driver;
-  ZwManager manager;
-  TestHandler requestHandler;
-  TestHandler defaultResponseHandler;
-  TestPort port;
+  late ZwDriver driver;
+  late ZwManager manager;
+  late TestHandler requestHandler;
+  late TestHandler defaultResponseHandler;
+  late TestPort port;
 
   // This should be called once from the main() method to initialize tests.
   // Do not override this method but override defineTests instead.
@@ -107,7 +107,7 @@ abstract class ZwRequestTest {
       return;
     }
 
-    manager.nodes.firstWhere((node) => node.id == nodeId, orElse: () {
+    manager.nodes.firstWhere((node) => node!.id == nodeId, orElse: () {
       fail('missing node $nodeId');
     });
   }
@@ -149,13 +149,13 @@ abstract class ZwRequestTest {
   }
 }
 
-class TestRequest extends ZwRequest<String> {
+class TestRequest extends ZwRequest<String?> {
   TestRequest(
     ZwManager manager,
-    int nodeId,
-    List<int> data, {
-    String Function(List<int> data) processResponse,
-    Object resultKey,
+    int? nodeId,
+    List<int>? data, {
+    String? Function(List<int> data)? processResponse,
+    Object? resultKey,
   }) : super(
           manager.logger,
           nodeId,
@@ -193,7 +193,7 @@ void startLogger() {
 bool _loggingStarted = false;
 
 printData(String constName, List<int> data) {
-  entry(int value, [String description]) {
+  entry(int value, [String? description]) {
     final buf = StringBuffer();
     buf.write(' 0x');
     buf.write(value.toRadixString(16).toUpperCase().padLeft(2, '0'));

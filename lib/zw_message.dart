@@ -1,5 +1,5 @@
 abstract class ZwMessage {
-  List<int> get data;
+  List<int?>? get data;
 
   @override
   String toString() {

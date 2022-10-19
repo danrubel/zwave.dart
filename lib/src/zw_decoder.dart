@@ -17,13 +17,13 @@ const RES_TYPE = 0x01; // response
 /// [ZwDecoder] translates the byte stream from a a Z-Wave controller
 /// into ACK, NAK, CAN, and data frames.
 class ZwDecoder {
-  final ZwDecodeListener listener;
+  final ZwDecodeListener? listener;
   final Duration messageTimeout;
 
   final _messageBuffer = <int>[];
-  Timer _messageTimer;
+  Timer? _messageTimer;
 
-  ZwDecoder(this.listener, {int messageTimeoutMsForTesting})
+  ZwDecoder(this.listener, {int? messageTimeoutMsForTesting})
       : messageTimeout =
             Duration(milliseconds: messageTimeoutMsForTesting ?? 1500);
 
@@ -35,7 +35,7 @@ class ZwDecoder {
   /// where [data] is an `int` or  `List<int>`
   void process(dynamic data) {
     if (_messageTimer != null) {
-      _messageTimer.cancel();
+      _messageTimer!.cancel();
       _messageTimer = null;
     }
 
@@ -48,15 +48,15 @@ class ZwDecoder {
         switch (data) {
           case ACK:
             _logFinest('<==', data, 'ACK');
-            listener.handleAck();
+            listener!.handleAck();
             return;
           case NAK:
             _logFinest('<==', data, 'NAK');
-            listener.handleNak();
+            listener!.handleNak();
             return;
           case CAN:
             _logFinest('<==', data, 'CAN');
-            listener.handleCan();
+            listener!.handleCan();
             return;
         }
       }
@@ -74,22 +74,22 @@ class ZwDecoder {
           break;
         case ACK:
           _logFinest('<==', ACK, 'ACK');
-          listener.handleAck();
+          listener!.handleAck();
           ++index;
           continue;
         case NAK:
           _logFinest('<==', NAK, 'ACK');
-          listener.handleNak();
+          listener!.handleNak();
           ++index;
           continue;
         case CAN:
           _logFinest('<==', CAN, 'ACK');
-          listener.handleCan();
+          listener!.handleCan();
           ++index;
           continue;
         default:
           _logger.warning('<== ${_messageBuffer[index]} unknown start');
-          listener.handleInvalidDataFrame();
+          listener!.handleInvalidDataFrame();
           // The decoding is misaligned or message is corrupted.
           // Discard the rest of the message.
           _messageBuffer.clear();
@@ -104,7 +104,7 @@ class ZwDecoder {
         final len = _messageBuffer[index];
         if (len < 3) {
           _logger.warning('<== $len invalid length');
-          listener.handleInvalidDataFrame();
+          listener!.handleInvalidDataFrame();
           // The decoding is misaligned or message is corrupted.
           // Discard the rest of the message.
           _messageBuffer.clear();
@@ -122,10 +122,10 @@ class ZwDecoder {
           final frame = _messageBuffer.sublist(frameStart, crcIndex + 1);
           if (crc == _messageBuffer[index]) {
             _logFiner('<==', frame, 'frame');
-            listener.handleDataFrame(frame);
+            listener!.handleDataFrame(frame);
           } else {
             _logger.warning('<== $frame invalid checksum');
-            listener.handleInvalidDataFrame();
+            listener!.handleInvalidDataFrame();
           }
           ++index;
           continue;
@@ -140,7 +140,7 @@ class ZwDecoder {
       // Data frame receiver timeout is 1500 ms
       _messageTimer = Timer(messageTimeout, () {
         _logger.warning('<== $_messageBuffer partial timeout');
-        listener.handleInvalidDataFrame();
+        listener!.handleInvalidDataFrame();
         _messageBuffer.clear();
         _messageTimer = null;
       });

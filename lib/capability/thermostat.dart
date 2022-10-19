@@ -9,19 +9,19 @@ import 'package:zwave/report/zw_command_class_report.dart';
 abstract class Thermostat implements ZwNodeMixin {
   /// The current fan mode or `null` if unknown.
   /// This correlates to the thermostat fan setting.
-  ThermostatFanModeReport fanMode;
+  ThermostatFanModeReport? fanMode;
 
   /// The current fan state or `null` if unknown.
   /// This indicates whether or not the fan is running.
-  ThermostatFanStateReport fanState;
+  ThermostatFanStateReport? fanState;
 
   /// The current thermostat mode or `null` if unknown.
   /// This correlates to the thermostat heat/cool setting.
-  ThermostatModeReport mode;
+  ThermostatModeReport? mode;
 
   /// The current thermostat state or `null` if unknown.
   /// This indicates system is currently heating or cooling.
-  ThermostatOperatingStateReport operatingState;
+  ThermostatOperatingStateReport? operatingState;
 
   @override
   void handleCommandClassThermostatFanMode(List<int> data) {
@@ -84,7 +84,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatFanModeReport> requestFanMode() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -96,7 +96,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatFanModeSupportedReport> requestFanModeSupported() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -108,7 +108,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatFanStateReport> requestFanState() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -120,7 +120,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatModeReport> requestMode() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -132,7 +132,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatModeSupportedReport> requestModeSupported() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -144,7 +144,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatOperatingStateReport> requestOperatingState() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -156,9 +156,9 @@ abstract class Thermostat implements ZwNodeMixin {
         resultKey: ThermostatOperatingStateReport));
   }
 
-  Future<void> setFanMode(int mode, {bool fanOn}) async {
+  Future<void> setFanMode(int mode, {bool? fanOn}) async {
     int offAndMode = ((fanOn ?? true) ? 0x00 : 0x80) + (mode & 0x0F);
-    await commandHandler.request(ZwRequest(
+    await commandHandler!.request(ZwRequest(
       logger,
       id,
       buildSendDataRequest(id, [

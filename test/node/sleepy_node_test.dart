@@ -11,7 +11,7 @@ import '../zw_request_test.dart';
 main() {
   SleepyNodeTest().init();
 
-  SleepyNode node;
+  late SleepyNode node;
   TestManager manager;
   TestCommand command;
   Future<List<int>> futureResult;
@@ -26,7 +26,7 @@ main() {
     command = TestCommand(31, [], expectedResponse: response1);
 
     futureResult = command.send(node.commandHandler);
-    TimeoutException exception;
+    TimeoutException? exception;
     try {
       await futureResult.timeout(const Duration(milliseconds: 1));
     } on TimeoutException catch (e) {
@@ -40,7 +40,7 @@ main() {
 }
 
 class SleepyNodeTest extends ZwRequestTest {
-  SleepyNode node;
+  late SleepyNode node;
 
   @override
   void defineTests() {
@@ -57,7 +57,7 @@ class SleepyNodeTest extends ZwRequestTest {
 //      startLogger();
 
       const expectedResult = 'a response';
-      Future<String> future = node.commandHandler.request(TestRequest(
+      Future<String?> future = node.commandHandler.request(TestRequest(
         manager,
         node.id,
         someRequest,
@@ -82,7 +82,7 @@ class SleepyNodeTest extends ZwRequestTest {
 
       // Simulate wakeup
       await node.handleWakeUpNotification(null);
-      String result;
+      String? result;
       try {
         result = await future;
       } on ZwException catch (ex, trace) {

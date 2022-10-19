@@ -10,13 +10,13 @@ main() {
 }
 
 class SecurityTest extends ZwRequestTest {
-  TestSecurityNode node;
+  TestSecurityNode? node;
 
   @override
   void defineTests() {
     setUp(() {
       node = TestSecurityNode(7);
-      manager.add(node);
+      manager.add(node!);
     });
 
     test('init', () {
@@ -25,9 +25,9 @@ class SecurityTest extends ZwRequestTest {
 
     group('nonce', () {
       test('generate', () {
-        var keys = <int>[0, 0, 0, 0, 0, 0, 0, 0];
+        var keys = <int?>[0, 0, 0, 0, 0, 0, 0, 0];
         for (int index = 0; index < 1000; ++index) {
-          var nonce = node.generateNonce();
+          var nonce = node!.generateNonce()!;
           expect(nonce, isNotNull);
           expect(nonce.values, hasLength(8));
           expect(nonce.values[0], nonce.key);
@@ -44,9 +44,9 @@ class SecurityTest extends ZwRequestTest {
       });
 
       test('report', () {
-        var expectedMessage = <int>[
+        var expectedMessage = <int?>[
           ...nonceReportResponseHeader,
-          ...node.nextTestNonce.values,
+          ...node!.nextTestNonce!.values,
           0x25 // transmit options
         ];
         appendCrc(expectedMessage);
@@ -63,10 +63,10 @@ class TestSecurityNode extends ZwNode with Security {
 
   get commandHander => super.commandHandler;
 
-  Nonce _nextTestNonce;
-  Nonce get nextTestNonce => _nextTestNonce ??= super.generateNonce();
+  Nonce? _nextTestNonce;
+  Nonce? get nextTestNonce => _nextTestNonce ??= super.generateNonce();
 
-  Nonce generateNonce() {
+  Nonce? generateNonce() {
     if (_nextTestNonce != null) {
       var nonce = _nextTestNonce;
       _nextTestNonce = null;

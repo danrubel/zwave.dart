@@ -3,7 +3,7 @@ import 'package:zwave/report/basic_report.dart';
 
 /// A node that supports COMMAND_CLASS_BASIC
 abstract class Basic implements ZwNodeMixin {
-  int value;
+  int? value;
 
   @override
   void handleBasicReport(BasicReport report) {

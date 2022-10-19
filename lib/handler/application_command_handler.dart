@@ -26,7 +26,7 @@ abstract class ApplicationCommandHandler<T>
   data[n] - checksum
   */
 
-  T handleCommandClassBasic(List<int> data) {
+  T? handleCommandClassBasic(List<int> data) {
     switch (data[8]) {
       case BASIC_SET:
         return handleBasicSet(BasicReport(data));
@@ -35,12 +35,12 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleBasicSet(BasicReport report) {
+  T? handleBasicSet(BasicReport report) {
     logger.warning('Unhandled BasicSet from ${report.sourceNode}');
     return null;
   }
 
-  T handleCommandClassSceneActivation(List<int> data) {
+  T? handleCommandClassSceneActivation(List<int> data) {
     switch (data[8]) {
       case SCENE_ACTIVATION_SET:
         return handleSceneActivationSet(SceneActivationSet(data));
@@ -49,11 +49,11 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleSceneActivationSet(SceneActivationSet scene) {
+  T? handleSceneActivationSet(SceneActivationSet scene) {
     return unhandledReport('SceneActivationSet', scene);
   }
 
-  T handleCommandClassSecurity(List<int> data) {
+  T? handleCommandClassSecurity(List<int> data) {
     switch (data[8]) {
       case SECURITY_NONCE_GET:
         return handleSecurityNonceGet(ZwCommandClassReport(data));
@@ -68,25 +68,25 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleSecurityNonceGet(ZwCommandClassReport report) {
+  T? handleSecurityNonceGet(ZwCommandClassReport report) {
     logger.warning('Unhandled SecurityNonceGet from ${report.sourceNode}');
     return null;
   }
 
-  T handleSecurityMessageEncapsulation(SecurityMessageEncapsulation message) {
+  T? handleSecurityMessageEncapsulation(SecurityMessageEncapsulation message) {
     logger.warning(
         'Unhandled SecurityMessageEncapsulation from ${message.sourceNode}');
     return null;
   }
 
-  T handleSecurityMessageEncapsulationNonceGet(
+  T? handleSecurityMessageEncapsulationNonceGet(
       SecurityMessageEncapsulation message) {
     logger.warning(
         'Unhandled SecurityMessageEncapsulationNonceGet from ${message.sourceNode}');
     return null;
   }
 
-  T handleMeterReport(MeterReport report) {
+  T? handleMeterReport(MeterReport report) {
     switch (report.type) {
       case METER_ELECTRICAL:
         return handleElectricalMeterReport(report);
@@ -95,10 +95,10 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleElectricalMeterReport(MeterReport report) =>
+  T? handleElectricalMeterReport(MeterReport report) =>
       unhandledReport('ElectricalMeterReport', report);
 
-  T handleSensorMultilevelReport(SensorMultilevelReport report) {
+  T? handleSensorMultilevelReport(SensorMultilevelReport report) {
     switch (report.type) {
       case SENSOR_MULTILEVEL_AIR_TEMPERATURE:
         return handleSensorMultilevelAirTemperature(report);
@@ -111,17 +111,17 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleSensorMultilevelAirTemperature(SensorMultilevelReport report) =>
+  T? handleSensorMultilevelAirTemperature(SensorMultilevelReport report) =>
       unhandledReport('SensorMultilevelAirTemperature', report);
 
-  T handleSensorMultilevelHumidity(SensorMultilevelReport report) =>
+  T? handleSensorMultilevelHumidity(SensorMultilevelReport report) =>
       unhandledReport('SensorMultilevelHumidity', report);
 
-  T handleSensorMultilevelPower(SensorMultilevelReport report) =>
+  T? handleSensorMultilevelPower(SensorMultilevelReport report) =>
       unhandledReport('SensorMultilevelPower', report);
 
   @override
-  T handleCommandClassWakeUp(List<int> data) {
+  T? handleCommandClassWakeUp(List<int> data) {
     switch (data[8]) {
       case WAKE_UP_NOTIFICATION:
         return handleWakeUpNotification(ZwCommandClassReport(data));
@@ -130,12 +130,12 @@ abstract class ApplicationCommandHandler<T>
     }
   }
 
-  T handleWakeUpNotification(ZwCommandClassReport report) {
+  T? handleWakeUpNotification(ZwCommandClassReport report) {
     logger.warning('Unhandled wake up notification from ${report.sourceNode}');
     return null;
   }
 
-  T unhandledReport(String reportName, ZwCommandClassReport report) {
+  T? unhandledReport(String reportName, ZwCommandClassReport report) {
     logger.warning(
         'Unhandled $reportName from ${report.sourceNode}: ${report.data}');
     return null;

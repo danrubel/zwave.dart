@@ -12,16 +12,16 @@ abstract class NodeNaming implements ZwNodeMixin {
   /// The node name or `null` if it has not been set or retrieved.
   /// Use [setNodeName] to set the name on the device itself
   /// or set this field directly to only set the name locally.
-  String name;
+  String? name;
 
   /// The node location or `null` if it has not been set or retrieved.
   /// Use [setNodeLocation] to set the location on the device itself
   /// or set this field directly to only set the location locally.
-  String location;
+  String? location;
 
   /// Request the name from the device.
-  Future<String> requestNodeName() async {
-    await commandHandler.request(
+  Future<String?> requestNodeName() async {
+    await commandHandler!.request(
       ZwRequest(
         logger,
         id,
@@ -46,7 +46,7 @@ abstract class NodeNaming implements ZwNodeMixin {
       0x00, // ASCII characters 0 - 127
     ];
     cmdData.addAll(buildAsciiChars(name));
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
       logger,
       id,
       buildSendDataRequest(id, cmdData),
@@ -54,8 +54,8 @@ abstract class NodeNaming implements ZwNodeMixin {
   }
 
   /// Request the location from the device.
-  Future<String> requestNodeLocation() async {
-    await commandHandler.request(
+  Future<String?> requestNodeLocation() async {
+    await commandHandler!.request(
       ZwRequest(
         logger,
         id,
@@ -80,7 +80,7 @@ abstract class NodeNaming implements ZwNodeMixin {
       0x00, // ASCII characters 0 - 127
     ];
     cmdData.addAll(buildAsciiChars(location));
-    return commandHandler
+    return commandHandler!
         .request(ZwRequest(logger, id, buildSendDataRequest(id, cmdData)));
   }
 
@@ -113,7 +113,7 @@ class NodeNameReport extends ZwCommandClassReport {
   /// - 0x02 = Unicode UTF-16
   int get encoding => data[9] & 0x03;
 
-  String get name {
+  String? get name {
     final codeUnits = data.sublist(10, data.length - 1);
     switch (encoding) {
       case 0: // ASCII
@@ -134,7 +134,7 @@ class NodeLocationReport extends ZwCommandClassReport {
   /// - 0x02 = Unicode UTF-16
   int get encoding => data[9] & 0x03;
 
-  String get location {
+  String? get location {
     final codeUnits = data.sublist(10, data.length - 1);
     switch (encoding) {
       case 0: // ASCII

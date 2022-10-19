@@ -11,7 +11,7 @@ main() {
     expect(node.temperature, isNull);
     node.handleSensorMultilevelAirTemperature(
         SensorMultilevelReport(airTempReportData));
-    expect((node.temperature * 10).round() / 10, 16.9);
+    expect((node.temperature! * 10).round() / 10, 16.9);
   });
 }
 

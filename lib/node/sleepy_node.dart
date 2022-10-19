@@ -20,7 +20,7 @@ class SleepyNode extends ZwNode {
 
   /// The last time that the wakeup notifications was received from the device
   /// or `null` if no wakeup notification has been received.
-  DateTime lastWakeupTime;
+  DateTime? lastWakeupTime;
 
   SleepyNode(int id) : super(id);
 
@@ -28,7 +28,7 @@ class SleepyNode extends ZwNode {
   CommandHandler get commandHandler => _queue;
 
   @override
-  Future<void> handleWakeUpNotification(ZwCommandClassReport report) async {
+  Future<void> handleWakeUpNotification(ZwCommandClassReport? report) async {
     lastWakeupTime = DateTime.now();
     logger.finer('handle wakeup');
     try {
@@ -39,7 +39,7 @@ class SleepyNode extends ZwNode {
       logger.warning('queued command exception', e, s);
     }
     logger.finer('sending sleep command');
-    await zwManager.request(ZwRequest(
+    await zwManager!.request(ZwRequest(
       logger,
       id,
       buildSendDataRequest(id, [

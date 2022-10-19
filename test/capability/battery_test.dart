@@ -12,7 +12,7 @@ main() {
 }
 
 class BatteryTest extends ZwRequestTest {
-  TestBatteryNode node;
+  late TestBatteryNode node;
 
   @override
   void defineTests() {
@@ -51,7 +51,7 @@ class BatteryTest extends ZwRequestTest {
 
       // Send delayed response as unsolicited request
       manager.dispatch(batteryReport2);
-      BatteryReport result;
+      BatteryReport? result;
       try {
         result = await future;
       } on ZwException catch (e) {
@@ -59,7 +59,7 @@ class BatteryTest extends ZwRequestTest {
       }
       expectComplete();
       expect(node.battery, isNotNull);
-      expect(result.percent, 47);
+      expect(result!.percent, 47);
       expect(node.battery, result);
     });
 

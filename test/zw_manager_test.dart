@@ -97,7 +97,7 @@ class ZwManagerTest extends ZwRequestTest {
 
     group('send', () {
       test('without ZwCommand.send', () async {
-        ZwException exception;
+        ZwException? exception;
         try {
           await manager.send(TestCommand(1, null));
         } on ZwException catch (e) {
@@ -107,7 +107,7 @@ class ZwManagerTest extends ZwRequestTest {
       });
 
       test('null data', () async {
-        ZwException exception;
+        ZwException? exception;
         try {
           await TestBadDataCommand(1, null).send(manager);
         } on ZwException catch (e) {
@@ -123,7 +123,7 @@ class ZwManagerTest extends ZwRequestTest {
           sendData(response1Simple);
         });
         port.expectedMessages.add(ackMsg);
-        String exception;
+        String? exception;
         try {
           await TestProcessResponseFailCommand(1, null).send(manager);
         } catch (e) {
@@ -274,7 +274,7 @@ class ZwManagerTest extends ZwRequestTest {
           expect(data, response1Complex);
           return expectedResult;
         });
-        String result = await manager.request(request);
+        String? result = await manager.request(request);
         expect(result, expectedResult);
         expect(processResponseCalled, isTrue);
         expectComplete();
@@ -288,7 +288,7 @@ class ZwManagerTest extends ZwRequestTest {
         });
         port.expectedMessages.add(ackMsg);
         const expectedException = 'some random exception';
-        String exception;
+        String? exception;
         try {
           await manager.request(ZwRequest(
               manager.logger, 1, buildFunctRequest(1),
@@ -359,7 +359,7 @@ class ZwManagerTest extends ZwRequestTest {
         // Send the delayed response
         const expectedResult = 'some random result';
         manager.processedResult<String>(8, expectedResult);
-        String result;
+        String? result;
         try {
           result = await future;
         } on ZwException catch (ex, trace) {
@@ -424,9 +424,9 @@ class ZwManagerTest extends ZwRequestTest {
           return expectedResult3;
         });
 
-        String result1 = await manager.request(req1);
-        String result2 = await manager.request(req2);
-        String result3 = await manager.request(req3);
+        String? result1 = await manager.request(req1);
+        String? result2 = await manager.request(req2);
+        String? result3 = await manager.request(req3);
 
         expect(called1, isTrue);
         expect(result1, expectedResult1);
@@ -491,14 +491,14 @@ class ZwManagerTest extends ZwRequestTest {
           return expectedResult3;
         });
 
-        Future<String> future1 = manager.request(req1);
-        Future<String> future2 = manager.request(req2);
-        Future<String> future3 = manager.request(req3);
+        Future<String?> future1 = manager.request(req1);
+        Future<String?> future2 = manager.request(req2);
+        Future<String?> future3 = manager.request(req3);
 
-        String result3 = await future3;
+        String? result3 = await future3;
         expectComplete();
-        String result2 = await future2;
-        String result1 = await future1;
+        String? result2 = await future2;
+        String? result1 = await future1;
 
         expect(called1, isTrue);
         expect(result1, expectedResult1);
@@ -512,17 +512,17 @@ class ZwManagerTest extends ZwRequestTest {
 }
 
 class TestBadDataCommand extends TestCommand {
-  TestBadDataCommand(int functId, List<int> functParam)
+  TestBadDataCommand(int functId, List<int>? functParam)
       : super(functId, functParam);
 
   @override
-  List<int> get data => null;
+  List<int>? get data => null;
 }
 
 class TestProcessResponseFailCommand extends TestCommand {
   static const exception = 'some random exception during processResponse';
 
-  TestProcessResponseFailCommand(int functId, List<int> functParam)
+  TestProcessResponseFailCommand(int functId, List<int>? functParam)
       : super(functId, functParam);
 
   @override

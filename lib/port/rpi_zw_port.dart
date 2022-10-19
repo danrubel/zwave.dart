@@ -10,29 +10,29 @@ import 'dart-ext:rpi_zw_port_ext';
 /// with a Z-Wave controller connected to a Raspberry Pi
 /// or other similar Linux system.
 class RpiZwPort extends ZwPort {
-  Isolate isolate;
-  SendPort cmdSendPort;
-  ReceivePort exitPort;
-  ReceivePort errorPort;
+  late Isolate isolate;
+  SendPort? cmdSendPort;
+  ReceivePort? exitPort;
+  ReceivePort? errorPort;
 
   @override
-  Future<void> openPort(String portPath) async {
+  Future<void> openPort(String? portPath) async {
     _logger.fine('starting isolate');
-    ReceivePort setupPort = ReceivePort();
+    ReceivePort? setupPort = ReceivePort();
     exitPort = ReceivePort();
     errorPort = ReceivePort()..listen(_processError);
 
     isolate = await Isolate.spawn(
       startIsolate,
-      [portPath, setupPort.sendPort, notificationPort.sendPort],
+      [portPath, setupPort.sendPort, notificationPort!.sendPort],
       debugName: 'zw_port_isolate',
       errorsAreFatal: true,
-      onExit: exitPort.sendPort,
-      onError: errorPort.sendPort,
+      onExit: exitPort!.sendPort,
+      onError: errorPort!.sendPort,
     );
 
     _logger.fine('awaiting command port');
-    cmdSendPort = await setupPort.first as SendPort;
+    cmdSendPort = await setupPort.first as SendPort?;
     setupPort.close();
     setupPort = null;
 
@@ -59,24 +59,24 @@ class RpiZwPort extends ZwPort {
   }
 
   @override
-  void write(List<int> data) {
-    cmdSendPort.send(data);
+  void write(List<int?>? data) {
+    cmdSendPort!.send(data);
   }
 
   @override
   Future<void> closePort() async {
-    if (exitPort == null) return 0;
+    if (exitPort == null) return;
 
     _logger.fine('isolate stopping');
-    cmdSendPort.send(null);
-    await exitPort.first.timeout(const Duration(seconds: 10), onTimeout: () {
+    cmdSendPort!.send(null);
+    await exitPort!.first.timeout(const Duration(seconds: 10), onTimeout: () {
       _logger.warning('killing isolate');
       isolate.kill();
     });
     _logger.fine('isolate stopped');
-    exitPort.close();
+    exitPort!.close();
     exitPort = null;
-    errorPort.close();
+    errorPort!.close();
     errorPort = null;
   }
 }
@@ -84,25 +84,25 @@ class RpiZwPort extends ZwPort {
 final Logger _logger = Logger('RpiZwPort');
 
 void startIsolate(List info) {
-  final portPath = info[0] as String;
+  final portPath = info[0] as String?;
   final setupSendPort = info[1] as SendPort;
-  final notificationSendPort = info[2] as SendPort;
+  final notificationSendPort = info[2] as SendPort?;
 
   RpiZwIsolate(portPath, notificationSendPort).start(setupSendPort);
 }
 
 class RpiZwIsolate {
-  final String portPath;
+  final String? portPath;
   final ReceivePort cmdPort = ReceivePort();
-  final SendPort notificationSendPort;
-  int ttyFd;
+  final SendPort? notificationSendPort;
+  int? ttyFd;
 
   RpiZwIsolate(this.portPath, this.notificationSendPort);
 
   void start(SendPort setupSendPort) async {
     log('starting');
     ttyFd = _openPort(portPath);
-    if (ttyFd <= 0)
+    if (ttyFd! <= 0)
       throw 'open port failed: $ttyFd, ${_lastError()}, $portPath';
 
     cmdPort.listen(processCmds);
@@ -113,13 +113,13 @@ class RpiZwIsolate {
       var data = _read(ttyFd);
       if (data is int) {
         log('one byte read');
-        notificationSendPort.send(data);
+        notificationSendPort!.send(data);
         if (data < 0) {
-          notificationSendPort.send(_lastError());
+          notificationSendPort!.send(_lastError());
         }
       } else if (data != null) {
         log('multiple bytes read');
-        notificationSendPort.send(data);
+        notificationSendPort!.send(data);
       } else {
         log('sleep before trying to read again');
         await Future.delayed(const Duration(milliseconds: 100));
@@ -135,7 +135,7 @@ class RpiZwIsolate {
     }
     log('command received');
 
-    int writeResult;
+    int? writeResult;
     if (message != null) {
       writeResult = _write(ttyFd, message as List<int>);
       if (writeResult >= 0) {
@@ -160,9 +160,9 @@ class RpiZwIsolate {
     //notificationSendPort.send(message);
   }
 
-  int _closePort(int ttyFd) native "closePort";
+  int _closePort(int? ttyFd) native "closePort";
   int _lastError() native "lastError";
-  int _openPort(String portPath) native "openPort";
-  dynamic _read(int ttyFd) native "read";
-  int _write(int ttyFd, List<int> bytes) native "write";
+  int _openPort(String? portPath) native "openPort";
+  dynamic _read(int? ttyFd) native "read";
+  int _write(int? ttyFd, List<int> bytes) native "write";
 }

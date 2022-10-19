@@ -11,7 +11,7 @@ abstract class NetworkManagementBasic implements ZwNodeMixin {
   /// Return a [Future] that completes with information about a node.
   Future<NodeInformationFrame> requestNodeInformationFrame(int nodeId) async {
     int sequenceNumber = nextSequenceNumber;
-    var report = await commandHandler.request(ZwRequest<NodeInformationFrame>(
+    var report = await commandHandler!.request(ZwRequest<NodeInformationFrame>(
         logger,
         id,
         buildSendDataRequest(id, [

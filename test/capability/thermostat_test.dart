@@ -9,7 +9,7 @@ main() {
 }
 
 class ThermostatTest extends ZwRequestTest {
-  ThermostatNode node;
+  late ThermostatNode node;
 
   @override
   void defineTests() {
