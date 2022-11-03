@@ -12,11 +12,11 @@ import 'package:logging/logging.dart';
 /// to the provided request/response handlers.
 abstract class ZwPort {
   /// The driver used by this port to process Z-Wave messages
-  ZwDriver driver;
+  late ZwDriver driver;
+  late ZwDecoder _decoder;
 
-  ZwDecoder _decoder;
-  ReceivePort notificationPort;
-  StreamSubscription _notificationSubscription;
+  ReceivePort? notificationPort;
+  StreamSubscription? _notificationSubscription;
 
   ZwPort() {
     driver = ZwDriver(write);
@@ -26,10 +26,12 @@ abstract class ZwPort {
   /// Open the ZWave serial port on [portPath]
   /// where [portPath] defaults to [defaultPortPath] if unspecified.
   Future<void> open(String portPath) async {
-    if (notificationPort != null) _error('already open');
-    if (portPath == null) _error('invalid port path');
+    if (notificationPort != null) {
+      _logger.warning('already open');
+      throw ZwException('already open');
+    }
     notificationPort = ReceivePort();
-    _notificationSubscription = notificationPort.listen(process);
+    _notificationSubscription = notificationPort!.listen(process);
     await openPort(portPath);
     _logger.config('opened $portPath');
 
@@ -38,7 +40,9 @@ abstract class ZwPort {
     // TODO Consider sending FUNC_ID_SERIAL_API_SOFT_RESET and waiting 1 1/2 sec
   }
 
-  void process(dynamic data) => _decoder.process(data);
+  void process(dynamic data) {
+    _decoder.process(data);
+  }
 
   /// Low level method for opening the Z-Wave port.
   /// Clients should call [open] which calls this method.
@@ -64,10 +68,3 @@ abstract class ZwPort {
 }
 
 final Logger _logger = Logger('ZwPort');
-
-void _error(String message, {int error}) {
-  final buf = StringBuffer(message);
-  if (error != null) buf.write(', error: $error');
-  _logger.warning(buf.toString());
-  throw ZwException(message);
-}

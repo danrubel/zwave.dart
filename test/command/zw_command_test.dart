@@ -49,9 +49,9 @@ class TestCommand extends ZwCommand<List<int>> {
   final int functId;
 
   @override
-  final List<int> functParam;
+  final List<int>? functParam;
 
-  final List<int> expectedResponse;
+  final List<int>? expectedResponse;
 
   TestCommand(this.functId, this.functParam, {this.expectedResponse});
 
@@ -61,7 +61,7 @@ class TestCommand extends ZwCommand<List<int>> {
   @override
   processResponse(List<int> response) {
     if (expectedResponse != null)
-      expect(response, orderedEquals(expectedResponse));
+      expect(response, orderedEquals(expectedResponse!));
     return response;
   }
 }

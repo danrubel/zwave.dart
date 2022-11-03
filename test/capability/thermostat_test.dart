@@ -9,7 +9,7 @@ main() {
 }
 
 class ThermostatTest extends ZwRequestTest {
-  ThermostatNode node;
+  late ThermostatNode node;
 
   @override
   void defineTests() {
@@ -56,7 +56,7 @@ class ThermostatTest extends ZwRequestTest {
       test('request', () async {
         expectingRequestResult(modeRequest, modeResult);
         ThermostatModeReport result = await node.requestMode();
-        expect(result.mode, 0x01);
+        expect(result.mode, ThermostatMode.heat);
         expect(node.mode, result);
       });
     });
@@ -66,8 +66,23 @@ class ThermostatTest extends ZwRequestTest {
         expectingRequestResult(operatingStateRequest, operatingStateReport);
         ThermostatOperatingStateReport result =
             await node.requestOperatingState();
-        expect(result.state, 0x00);
+        expect(result.state, ThermostatOperatingState.idle);
         expect(node.operatingState, result);
+      });
+    });
+
+    group('set point', () {
+      test('request', () async {
+        expectingRequestResult(setPointRequest, setPointReport);
+        ThermostatSetPointReport result =
+            await node.requestSetPoint(ThermostatSetPointType.heating);
+        expect(result.setPointType, 1);
+        expect(result.precision, 0);
+        expect(result.scale, ThermostatSetPointScale.fahrenheit);
+        expect(result.valueSize, 1);
+        expect(result.value, 70); // fahrenheit
+        expect((result.temperature * 10).round() / 10, 21.1); // celsius
+        expect(node.heatingSetPoint, result);
       });
     });
   }
@@ -201,4 +216,32 @@ const operatingStateReport = [
   0x03, // THERMOSTAT_OPERATING_STATE_REPORT
   0x00, // idle
   0xBD, // checksum
+];
+const setPointRequest = [
+  0x01, // SOF
+  0x09, // length 9 excluding SOF and checksum
+  0x00, // request
+  0x13, // FUNC_ID_ZW_SEND_DATA
+  0x0D, // source node 13
+  0x03, // command length 3
+  0x43, // COMMAND_CLASS_THERMOSTAT_SETPOINT
+  0x02, // THERMOSTAT_SETPOINT_GET
+  0x01, // Heating set point
+  0x25, // transmit options: explore, auto route, ack
+  0x8E, // checksum
+];
+const setPointReport = [
+  0x01, // SOF
+  0x0B, // length 11 excluding SOF and checksum
+  0x00, // request
+  0x04, // FUNC_ID_APPLICATION_COMMAND_HANDLER
+  0x08, // rxStatus
+  0x0D, // source node 13
+  0x05, // command length 5
+  0x43, // COMMAND_CLASS_THERMOSTAT_SETPOINT
+  0x03, // THERMOSTAT_SETPOINT_REPORT
+  0x01, // set point type - 0x01 = heating, 0x02 = cooling, ...
+  0x09, // precision = 0, scale = 1 (fahrenheit), size = 1
+  0x46, // value = 70 degrees fahrenheit
+  0xFE, // checksum
 ];

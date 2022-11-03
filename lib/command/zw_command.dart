@@ -7,15 +7,16 @@ import 'package:zwave/src/zw_decoder.dart';
 import 'package:zwave/zw_message.dart';
 
 abstract class ZwCommand<T> extends ZwMessage {
-  Logger logger;
+  late Logger logger;
 
-  Completer<List<int>> _responseCompleter;
+  Completer<List<int>>? _responseCompleter;
 
   ZwCommand() {
     logger = Logger('$runtimeType');
   }
 
   /// Return the complete message to be sent out on the Z-Wave network
+  @override
   List<int> get data {
     final data = <int>[
       SOF, // start of frame
@@ -25,15 +26,15 @@ abstract class ZwCommand<T> extends ZwMessage {
     ];
 
     // Add function parameters if there are any
-    List<int> param = functParam;
+    var param = functParam;
     if (param != null) {
       data.addAll(param);
       data[1] = data.length - 1; // update length field
     }
 
     // Calculate and append checksum
-    int crc = 0xFF;
-    for (int index = 1; index < data.length; ++index) crc ^= data[index];
+    var crc = 0xFF;
+    for (var index = 1; index < data.length; ++index) crc ^= data[index];
     data.add(crc);
 
     return data;
@@ -41,9 +42,9 @@ abstract class ZwCommand<T> extends ZwMessage {
 
   int get functId;
 
-  List<int> get functParam;
+  List<int>? get functParam;
 
-  Completer<List<int>> get responseCompleter => _responseCompleter;
+  Completer<List<int>>? get responseCompleter => _responseCompleter;
 
   Duration get responseTimeout => const Duration(seconds: 5);
 
@@ -53,7 +54,7 @@ abstract class ZwCommand<T> extends ZwMessage {
   Future<T> send(CommandHandler handler) async {
     if (_responseCompleter != null) throw 'already called send';
     _responseCompleter = Completer<List<int>>();
-    Future<T> result = _responseCompleter.future.then(processResponse);
+    var result = _responseCompleter!.future.then(processResponse);
     await handler.send(this);
     return result;
   }

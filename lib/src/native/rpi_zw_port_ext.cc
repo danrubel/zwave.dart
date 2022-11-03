@@ -132,7 +132,11 @@ void read(Dart_NativeArguments arguments) {
   intptr_t numRead = read(tty_fd, &values, sizeof(values));
 
   if (numRead > 1) {
-    Dart_Handle data = HandleError(Dart_NewListOf(Dart_CoreType_Int, numRead));
+    // Is Dart_NewListOf broken in 2.12.4 ?
+    // Dart_Handle data = HandleError(Dart_NewListOf(Dart_CoreType_Int, numRead));
+    // Dart_GetType()
+    // Dart_NewListOfTypeFilled()
+    Dart_Handle data = HandleError(Dart_NewList(numRead));
     for (int index = 0; index < numRead; ++index) {
       Dart_Handle value = HandleError(Dart_NewInteger(values[index]));
       HandleError(Dart_ListSetAt(data, index, value));

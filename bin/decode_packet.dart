@@ -66,7 +66,7 @@ void printLogTo(StringBuffer buffer, LogRecord rec) {
 void usage() {
   var appName = Platform.resolvedExecutable;
   appName = appName.substring(appName.lastIndexOf('bin/'));
-  print('usage: dart $appName <list-of-bytes>');
-  print('  where <list-of-bytes> is a list of int values between 0 and 255 inclusive');
+  print('usage: dart $appName <bytes>');
+  print('  where <bytes> is a list of int values between 0 and 255 inclusive');
   print('  all "[", ",", and "]" characters are ignored');
 }

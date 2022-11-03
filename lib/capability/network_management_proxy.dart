@@ -11,7 +11,7 @@ abstract class NetworkManagementProxy implements ZwNodeMixin {
   /// Return a [Future] that completes with a current node list.
   Future<NodeListReport> requestNodeList() async {
     int sequenceNumber = nextSequenceNumber;
-    var report = await commandHandler.request(ZwRequest<NodeListReport>(
+    var report = await commandHandler!.request(ZwRequest<NodeListReport>(
         logger,
         id,
         buildSendDataRequest(id, [

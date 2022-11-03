@@ -21,11 +21,10 @@ class ZwDecoder {
   final Duration messageTimeout;
 
   final _messageBuffer = <int>[];
-  Timer _messageTimer;
+  Timer? _messageTimer;
 
-  ZwDecoder(this.listener, {int messageTimeoutMsForTesting})
-      : messageTimeout =
-            Duration(milliseconds: messageTimeoutMsForTesting ?? 1500);
+  ZwDecoder(this.listener, {int messageTimeoutMsForTesting = 1500})
+      : messageTimeout = Duration(milliseconds: messageTimeoutMsForTesting);
 
   void clear() {
     _messageBuffer.clear();
@@ -35,7 +34,7 @@ class ZwDecoder {
   /// where [data] is an `int` or  `List<int>`
   void process(dynamic data) {
     if (_messageTimer != null) {
-      _messageTimer.cancel();
+      _messageTimer!.cancel();
       _messageTimer = null;
     }
 
@@ -62,10 +61,10 @@ class ZwDecoder {
       }
       _messageBuffer.add(data);
     } else {
-      _messageBuffer.addAll(data as List<int>);
+      for (var value in (data as List)) _messageBuffer.add(value as int);
     }
 
-    int index = 0;
+    var index = 0;
     while (index < _messageBuffer.length) {
       // Handle all the 1 byte messages
       switch (_messageBuffer[index]) {

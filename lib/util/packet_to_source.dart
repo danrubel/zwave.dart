@@ -1,15 +1,18 @@
+import 'dart:math';
+
 import 'package:logging/logging.dart';
 import 'package:zwave/handler/application_command_handler.dart';
 import 'package:zwave/handler/message_dispatcher.dart';
 import 'package:zwave/message_consts.dart';
+import 'package:zwave/report/meter_report.dart';
 import 'package:zwave/report/security_message_encapsulation.dart';
 import 'package:zwave/report/security_nonce_report.dart';
 import 'package:zwave/report/sensor_multilevel_report.dart';
+import 'package:zwave/report/sensor_multilevel_supported_sensor_report.dart';
 import 'package:zwave/src/command_class_names.g.dart';
 
 /// Return a string with the packet's data in source form with comments
 String packetToSource(List<int> data) {
-  if (data == null) return '';
   final writer = _Writer(data);
   if (writer.writePacketHeader()) {
     _FuncIdProcessor(writer).dispatch(data);
@@ -28,6 +31,7 @@ class _FuncIdProcessor extends MessageDispatcher<void> {
   @override
   Logger get logger => writer.logger;
 
+  @override
   void handleApplicationCommandHandler(List<int> data) {
     if (writer.writeFuncIdApplicationCommandHeader()) {
       if (writer.bytesLeft > 1) {
@@ -36,6 +40,19 @@ class _FuncIdProcessor extends MessageDispatcher<void> {
     }
   }
 
+  @override
+  void handleZwApplicationUpdate(List<int> data) {
+    writer.writeFunctIdZwApplicationUpdate();
+  }
+
+  @override
+  void handleZwRequestNodeInfo(List<int> data) {
+    writer.comment('FUNC_ID_ZW_REQUEST_NODE_INFO');
+    if (!writer.writeByte()) return;
+    writer.comment('source node ${writer.currentValue}');
+  }
+
+  @override
   void handleZwSendData(List<int> data) {
     if (writer.writeFunctIdZwSendData()) {
       if (writer.bytesLeft > 2) {
@@ -45,10 +62,12 @@ class _FuncIdProcessor extends MessageDispatcher<void> {
     }
   }
 
+  @override
   void unhandledMessage(int functId, String functName, List<int> data) {
     writer.comment(functName);
   }
 
+  @override
   void handleUnknownFunctionId(List<int> data) {
     writer.comment('FUNC_ID_???');
   }
@@ -62,34 +81,96 @@ class _ApplicationCommandProcessor extends ApplicationCommandHandler {
   @override
   Logger get logger => writer.logger;
 
-  void handleSensorMultilevelReport(SensorMultilevelReport report) {
-    switch (writer.currentValue) {
-      case SENSOR_MULTILEVEL_REPORT:
-        if (!writer.writeByte()) return;
-        switch (writer.currentValue) {
-          case SENSOR_MULTILEVEL_AIR_TEMPERATURE:
-            writer.comment('SENSOR_MULTILEVEL_AIR_TEMPERATURE');
-            break;
-          case SENSOR_MULTILEVEL_POWER:
-            writer.comment('SENSOR_MULTILEVEL_POWER');
-            break;
-          case SENSOR_MULTILEVEL_HUMIDITY:
-            writer.comment('SENSOR_MULTILEVEL_HUMIDITY');
-            break;
-          default:
-            writer.comment(null);
-            return;
-        }
-        if (!writer.writeByte()) return;
-        writer.comment('precision ${report.precision}'
-            ', scale ${report.scale}, size ${report.valueSize}');
-        if (!writer.writeByte()) return;
-        writer.comment(report.valueWithUnits);
-        break;
+  @override
+  void handleElectricalMeterReport(MeterReport report) {
+    if (!writer.writeByte()) return;
+    writer.comment('flags: type ${report.type}, rate ${report.rateType}');
+    if (!writer.writeByte()) return;
+    writer.comment('flags: scale ${report.scale}, precision ${report.precision}'
+        ', size ${report.valueSize}');
+    if (!writer.writeBytes(report.valueSize, 'value')) return;
+    var value = report.value;
+    if (report.precision > 0) {
+      var factor = pow(10, report.precision);
+      value = (value * factor).truncateToDouble() / factor;
+    }
+    writer.comment('value $value');
+    if (!writer.writeBytes(2, 'delta time')) return;
+    writer.comment('delta time ${report.deltaTime} seconds');
+    if (!writer.writeBytes(report.valueSize, 'prior value')) return;
+    var priorValue = report.value;
+    if (report.precision > 0) {
+      var factor = pow(10, report.precision);
+      priorValue = (priorValue * factor).truncateToDouble() / factor;
+    }
+    writer.comment('prior value $priorValue');
+  }
+
+  @override
+  void handleCommandClassNotification(List<int> data) {
+    writer.comment('notification report');
+    if (!writer.writeByte()) return;
+    writer.comment('V1 Alarm Type');
+    if (!writer.writeByte()) return;
+    writer.comment('V1 Alarm Value');
+    if (!writer.writeByte()) return;
+    writer.comment('Reserved');
+    if (!writer.writeByte()) return;
+    writer.comment('Notification Status');
+
+    if (!writer.writeByte()) return;
+    NotificationType? notificationType;
+    if (writer.currentValue < notificationTypes.length)
+      notificationType = notificationTypes[writer.currentValue];
+    if (notificationType == null) {
+      writer.comment('Unknown Notification Type');
+      return;
+    }
+    writer.comment(notificationType.name);
+
+    if (!writer.writeByte()) return;
+    NotificationValue? notificationValue;
+    if (writer.currentValue < notificationType.notifications.length)
+      notificationValue = notificationType.notifications[writer.currentValue];
+    if (notificationValue == null) {
+      writer.comment('Unknown Notification');
+      return;
+    }
+    writer.comment(notificationValue.name);
+
+    if (!writer.writeByte()) return;
+    writer.comment('Notification Event / State');
+  }
+
+  @override
+  void handleSensorMultilevelSupportedSensorReport(
+      SensorMultilevelSupportedSensorReport report) {
+    writer.comment('sensor type   byte   bitmask   description');
+    writer.comment(
+        '-----------   ----   -------   ----------------------------------------------');
+    for (var sensorType in report.sensorTypes) {
+      var sensorTypeNum = sensorType.sensorTypeNum.toString().padLeft(2);
+      writer.comment(
+          '    $sensorTypeNum ${sensorType.sensorTypeNumHex}      ${sensorType.byteNum}      ${sensorType.bitMaskHex}   ${sensorType.description}');
     }
   }
 
-  void handleSecurityMessageEncapsulation(SecurityMessageEncapsulation message) {
+  @override
+  void handleSensorMultilevelReport(SensorMultilevelReport report) {
+    if (writer.currentValue == SENSOR_MULTILEVEL_REPORT) {
+      if (!writer.writeByte()) return;
+      writer.comment(report.sensorType.description);
+      if (!writer.writeByte()) return;
+      writer.comment(
+          'precision ${report.precision}, scale ${report.scale}, size ${report.valueSize}');
+      if (!writer.writeByte()) return;
+      writer.comment(report.valueWithUnits);
+    }
+  }
+
+  @override
+  void handleSecurityMessageEncapsulation(
+      SecurityMessageEncapsulation message) {
     if (!writer.writeBytes(8, 'init vector')) return;
     writer.comment('begin encrypted payload');
 
@@ -107,7 +188,8 @@ class _ApplicationCommandProcessor extends ApplicationCommandHandler {
   }
 
   @override
-  void handleSecurityMessageEncapsulationNonceGet(SecurityMessageEncapsulation message) {
+  void handleSecurityMessageEncapsulationNonceGet(
+      SecurityMessageEncapsulation message) {
     handleSecurityMessageEncapsulation(message);
   }
 
@@ -116,10 +198,12 @@ class _ApplicationCommandProcessor extends ApplicationCommandHandler {
     writer.writeBytes(8, 'nonce');
   }
 
+  @override
   void handleUnknownCommandClassId(int cmdId, List<int> data) {
     writer.comment('unknown command class id');
   }
 
+  @override
   void unhandledCommandClass(int cmdId, String cmdName, List<int> data) {
     writer.comment('raw command class data');
   }
@@ -130,7 +214,7 @@ class _Writer {
   final List<int> orig;
   final buf = StringBuffer();
   int index = -1;
-  int currentValue;
+  int currentValue = 0;
 
   _Writer(this.orig);
 
@@ -141,8 +225,8 @@ class _Writer {
     if (!writeByte()) return false;
     comment(currentValue == 1 ? 'SOF' : '??? expected SOF 0x01');
     if (!writeByte()) return false;
-    comment('length ${currentValue} excluding SOF and checksum');
-    int expLen = currentValue + 2;
+    comment('length $currentValue excluding SOF and checksum');
+    var expLen = currentValue + 2;
     if (expLen != orig.length) comment('expected $expLen bytes in packet');
     if (!writeByte()) return false;
     commentAt(['request', 'response'], currentValue, '???');
@@ -168,6 +252,47 @@ class _Writer {
     commentKey(COMMAND_CLASS_NAMES, cmdClassId, 'COMMAND_CLASS_???');
     if (!writeByte()) return false;
     commentKey(COMMAND_NAMES[cmdClassId], currentValue);
+    return true;
+  }
+
+  /// Write command header bytes. Return true if more bytes to be processed.
+  bool writeFunctIdZwApplicationUpdate() {
+    comment('FUNC_ID_ZW_APPLICATION_UPDATE');
+    if (!writeByte()) return false;
+    commentKey(UPDATE_STATE_NAMES, currentValue, '???');
+    if (currentValue != UPDATE_STATE_NODE_INFO_RECEIVED) return false;
+    if (!writeByte()) return false;
+    comment('source node $currentValue');
+    if (!writeByte()) return false;
+    comment('remaining bytes excluding checksum');
+    if (currentValue + 1 != bytesLeft)
+      comment('expected $currentValue more bytes plus checksum');
+
+    if (!writeByte()) return false;
+    comment('capability flags:'
+        '${currentValue & 0x80 > 0 ? ' always listening,' : ''}'
+        '${currentValue & 0x40 > 0 ? ' routing,' : ''}'
+        ' ${currentValue >> 3 & 0x07} max speed,'
+        ' protocol version ${currentValue & 0x07}');
+
+    if (!writeByte()) return false;
+    comment('security flags');
+
+    if (!writeByte()) return false;
+    comment('reserved');
+
+    if (bytesLeft > 1) {
+      comment('non-secure supported command classes:');
+      while (bytesLeft > 1) {
+        writeByte();
+        if (currentValue == 0xEF) {
+          comment('support/control mark');
+          comment('non-secure controlled command classes:');
+          continue;
+        }
+        commentKey(COMMAND_CLASS_NAMES, currentValue, 'unknown');
+      }
+    }
     return true;
   }
 
@@ -204,7 +329,7 @@ class _Writer {
     if (!writeByte()) return;
 
     var options = StringBuffer();
-    addOption(int bitMask, String name) {
+    void addOption(int bitMask, String name) {
       if (currentValue & bitMask == 0) return;
       if (options.isNotEmpty) options.write(', ');
       options.write(name);
@@ -237,20 +362,18 @@ class _Writer {
     return true;
   }
 
-  void comment(String text) {
+  void comment(String? text) {
     buf.writeln(text != null ? ' // $text' : '');
   }
 
-  void commentAt(List<String> textList, int index, [String defaultText]) {
+  void commentAt(List<String> textList, int index, [String? defaultText]) {
     comment(textList != null && index < textList.length
         ? textList[index]
         : defaultText);
   }
 
-  void commentKey(Map<int, String> textMap, int index, [String defaultText]) {
-    comment(textMap != null && textMap.containsKey(index)
-        ? textMap[index]
-        : defaultText);
+  void commentKey(Map<int, String>? textMap, int index, [String? defaultText]) {
+    comment(textMap != null ? textMap[index] ?? defaultText : defaultText);
   }
 
   bool writeBytes(int numBytes, String name) {
@@ -276,7 +399,8 @@ class _Writer {
         expectedCrc ^= orig[index];
       }
       if (orig[orig.length - 1] != expectedCrc) {
-        comment('invalid checksum - expected $expectedCrc');
+        comment('invalid checksum - expected $expectedCrc'
+            ', 0x${expectedCrc.toRadixString(16).toUpperCase().padLeft(2)}');
       }
     } else {
       buf.writeln(' // missing checksum');

@@ -1,4 +1,5 @@
 // Function constants
+// Import zwave/lib/message_consts.dart rather than directly importing this file
 
 const FUNC_ID_APPLICATION_COMMAND_HANDLER = 0x04;
 const FUNC_ID_APPLICATION_SLAVE_COMMAND_HANDLER = 0xA1;

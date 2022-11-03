@@ -7,10 +7,10 @@ import 'package:zwave/zw_exception.dart';
 import 'package:test/test.dart';
 
 main() {
-  ZwDriver driver;
-  TestHandler requestHandler;
-  TestHandler defaultResponseHandler;
-  TestPort port;
+  late ZwDriver driver;
+  late TestHandler requestHandler;
+  late TestHandler defaultResponseHandler;
+  late TestPort port;
 
   void expectComplete() {
     expect(requestHandler.expectedData, isNull);
@@ -191,7 +191,7 @@ class TestPort {
 }
 
 class TestHandler {
-  List<int> expectedData;
+  List<int>? expectedData;
 
   void process(List<int> data) {
     if (expectedData == null) fail('unexpected data: $data');

@@ -46,7 +46,6 @@ String getZWaveDevicePath(List<String> args) {
     print('  perhaps one of ${deviceFiles.join(', ')} ?');
   }
   exit(1);
-  return null;
 }
 
 void setupLogger() {

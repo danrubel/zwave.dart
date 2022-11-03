@@ -10,7 +10,7 @@ void main() {
 }
 
 class BinarySwitchTest extends ZwRequestTest {
-  TestBinarySwitchNode node;
+  late TestBinarySwitchNode node;
 
   @override
   void defineTests() {

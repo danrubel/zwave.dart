@@ -5,7 +5,7 @@ import 'package:logging/logging.dart';
 /// Mixins that can mixed in with [ZwNode] typically implement this.
 abstract class ZwNodeMixin implements ApplicationCommandHandler<void> {
   /// Return the [CommandHandler] to which commands should be sent.
-  CommandHandler get commandHandler;
+  CommandHandler? get commandHandler;
 
   /// The unique id associated with this device in this Z-Wave network.
   int get id;

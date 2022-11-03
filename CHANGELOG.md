@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0
+* migrate to null safety
+* rename `build_lib` to `build_native`
+* update build script to work on Windows
+* add Thermostat heating/coolingSetPoint
+* add ThermostatSetPointReport
+* add ThermostateMode, ThermostatSetPointType, ThermostatSetPointScale consts
+* decode zwave packet improvements
+* add support for SENSOR_MULTILEVEL_SUPPORTED_SENSOR_REPORT
+* deprecate AirTemperature, Humidity, and Power mixins in favor of SensorMultilevel mixin
+* add support for COMMAND_CLASS_NOTIFICATION NOTIFICATION_REPORT
+
 ## 0.10.0
 * remove const COMMAND_CLASS_ALARM because it has been replaced by COMMAND_CLASS_NOTIFICATION
 * replace zwave cli with zw_check.dart for checking the connection to the Z-Wave controller

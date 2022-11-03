@@ -25,14 +25,14 @@ class MeterReport extends ZwCommandClassReport {
   num get value => bytesToNum(data.sublist(11, 11 + valueSize), precision);
 
   // optional
-  int get deltaTime {
+  int? get deltaTime {
     int index = 11 + valueSize;
     if (data.length < index + 2) return null;
     return bytesToInt(data.sublist(index, index + 2));
   }
 
   // optional
-  num get previousValue {
+  num? get previousValue {
     int index = 13 + valueSize;
     if (data.length < index + valueSize) return null;
     return bytesToNum(data.sublist(index, index + valueSize), precision);

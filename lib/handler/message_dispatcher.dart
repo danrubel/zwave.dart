@@ -4,9 +4,9 @@ import 'package:zwave/src/zw_decoder.dart' show SOF;
 /// [MessageDispatcher] processes Z-Wave messages received from the controller
 /// and dispatches them to the various handle<FunctionName> methods in this
 /// class. Subclasses should override these handle methods as necessary.
-abstract class MessageDispatcher<T> extends FunctionHandlerBase<T> {
+abstract class MessageDispatcher<T> extends FunctionHandlerBase<T?> {
   @override
-  T dispatch(List<int> data) {
+  T? dispatch(List<int> data) {
     if (data == null || data.length < 5) {
       logger.warning('packet too small: $data');
       return null;

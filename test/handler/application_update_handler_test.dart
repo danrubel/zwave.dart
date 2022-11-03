@@ -9,7 +9,7 @@ main() {
 }
 
 class ApplicationUpdateHandlerTest extends ZwRequestTest {
-  ZwNode node;
+  late ZwNode node;
 
   @override
   void defineTests() {

@@ -11,16 +11,24 @@ abstract class NetworkManagementBasic implements ZwNodeMixin {
   /// Return a [Future] that completes with information about a node.
   Future<NodeInformationFrame> requestNodeInformationFrame(int nodeId) async {
     int sequenceNumber = nextSequenceNumber;
-    var report = await commandHandler.request(ZwRequest<NodeInformationFrame>(
+    var report = await commandHandler!.request(ZwRequest<NodeInformationFrame>(
         logger,
         id,
-        buildSendDataRequest(id, [
-          COMMAND_CLASS_NETWORK_MANAGEMENT_BASIC,
-          COMMAND_NODE_INFORMATION_SEND,
-          sequenceNumber,
-          0, // reserved
-          1, // destination node = controller?
-        ]),
+        buildSendDataRequest(
+          id,
+          [
+            COMMAND_CLASS_NETWORK_MANAGEMENT_BASIC,
+            COMMAND_NODE_INFORMATION_SEND,
+            sequenceNumber,
+            0, // reserved
+            0xFF, // node info destination - 0xFF = broadcast to all nodes
+            // special transmit options for the receiver
+            // It is RECOMMENDED for a sending node to use
+            // the TRANSMIT_OPTION_NO_ROUTE tx Option
+            // and the broadcast NodeID in this command.
+            TransmitOptions(noRoute: true).flags,
+          ],
+        ),
         processResponse: (data) => NodeInformationFrame(data),
         resultKey: NodeInformationFrame));
 

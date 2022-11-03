@@ -25,11 +25,11 @@ abstract class ApplicationUpdateHandler<T> implements ZwNodeMixin {
   bool firstUpdateStateNodeInfoReceived = true;
 
   Future<UpdateStateNodeInfoReceived> requestNodeInfo() =>
-      commandHandler.request(ZwRequest(
+      commandHandler!.request(ZwRequest(
           logger, id, buildFunctRequest(FUNC_ID_ZW_REQUEST_NODE_INFO, [id]),
           resultKey: UpdateStateNodeInfoReceived));
 
-  T dispatchApplicationUpdate(List<int> data) {
+  T? dispatchApplicationUpdate(List<int> data) {
     switch (data[4]) {
       case UPDATE_STATE_NODE_INFO_RECEIVED:
         return handleUpdateStateNodeInfoReceived(data);
@@ -42,12 +42,12 @@ abstract class ApplicationUpdateHandler<T> implements ZwNodeMixin {
     logger.warning('Unhandled state change');
   }
 
-  T handleUpdateStateNodeInfoReceived(List<int> data) {
+  T? handleUpdateStateNodeInfoReceived(List<int> data) {
     final info = UpdateStateNodeInfoReceived(data);
     if (!processedResult<UpdateStateNodeInfoReceived>(info)) {
       if (firstUpdateStateNodeInfoReceived) {
         firstUpdateStateNodeInfoReceived = false;
-        logger.info('Supported command classes: '
+        logger.fine('Supported command classes: '
             '${info.sourceNode} ${info.commandClasses}');
       }
       // Assume that an unsolicited update indicates a state change
@@ -56,7 +56,7 @@ abstract class ApplicationUpdateHandler<T> implements ZwNodeMixin {
     return null;
   }
 
-  T handleUnknownApplicationUpdate(int cmdId, List<int> data) {
+  T? handleUnknownApplicationUpdate(int cmdId, List<int> data) {
     final nodeId = data[5];
     logger.warning('Unknown application update id: $nodeId $cmdId $data');
     return null;

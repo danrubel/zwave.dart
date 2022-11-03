@@ -13,3 +13,6 @@
 packages
 pubspec.lock
 zwave.iml
+
+bin/*.hash
+bin/*.snapshot

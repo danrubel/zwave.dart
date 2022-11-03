@@ -9,8 +9,8 @@ main() {
     1, 16, 1, 21, 90, 45, 87, 97, 118, 101, 32, 51, 46, 57, 53, 0, 1, 153
   ];
 
-  ZwDecoder decoder;
-  TestListener listener;
+  late ZwDecoder decoder;
+  late TestListener listener;
 
   setUp(() {
     listener = TestListener();
@@ -112,7 +112,7 @@ main() {
 
 class TestListener implements ZwDecodeListener {
   final List received = [];
-  Completer _completer;
+  Completer? _completer;
 
   void append(dynamic data) {
     received.add(data);
@@ -152,6 +152,6 @@ class TestListener implements ZwDecodeListener {
   Future hasReceived() {
     if (_completer != null) fail('already waiting');
     _completer = Completer();
-    return _completer.future;
+    return _completer!.future;
   }
 }

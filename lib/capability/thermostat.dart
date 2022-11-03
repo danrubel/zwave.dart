@@ -9,19 +9,27 @@ import 'package:zwave/report/zw_command_class_report.dart';
 abstract class Thermostat implements ZwNodeMixin {
   /// The current fan mode or `null` if unknown.
   /// This correlates to the thermostat fan setting.
-  ThermostatFanModeReport fanMode;
+  ThermostatFanModeReport? fanMode;
 
   /// The current fan state or `null` if unknown.
   /// This indicates whether or not the fan is running.
-  ThermostatFanStateReport fanState;
+  ThermostatFanStateReport? fanState;
 
   /// The current thermostat mode or `null` if unknown.
   /// This correlates to the thermostat heat/cool setting.
-  ThermostatModeReport mode;
+  ThermostatModeReport? mode;
 
   /// The current thermostat state or `null` if unknown.
   /// This indicates system is currently heating or cooling.
-  ThermostatOperatingStateReport operatingState;
+  ThermostatOperatingStateReport? operatingState;
+
+  /// The current thermostat heating set point or `null` if unknown.
+  /// This correlates to the thermostat heating target temperature.
+  ThermostatSetPointReport? heatingSetPoint;
+
+  /// The current thermostat cooling set point or `null` if unknown.
+  /// This correlates to the thermostat cooling target temperature.
+  ThermostatSetPointReport? coolingSetPoint;
 
   @override
   void handleCommandClassThermostatFanMode(List<int> data) {
@@ -83,8 +91,20 @@ abstract class Thermostat implements ZwNodeMixin {
     }
   }
 
+  @override
+  void handleCommandClassThermostatSetpoint(List<int> data) {
+    switch (data[8]) {
+      case THERMOSTAT_SETPOINT_REPORT:
+        processedResult<ThermostatSetPointReport>(updateSetPoint(data));
+        return;
+      default:
+        return unhandledCommandClass(COMMAND_CLASS_THERMOSTAT_SETPOINT,
+            'COMMAND_CLASS_THERMOSTAT_SETPOINT', data);
+    }
+  }
+
   Future<ThermostatFanModeReport> requestFanMode() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -96,7 +116,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatFanModeSupportedReport> requestFanModeSupported() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -108,7 +128,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatFanStateReport> requestFanState() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -120,7 +140,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatModeReport> requestMode() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -132,7 +152,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatModeSupportedReport> requestModeSupported() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -144,7 +164,7 @@ abstract class Thermostat implements ZwNodeMixin {
   }
 
   Future<ThermostatOperatingStateReport> requestOperatingState() {
-    return commandHandler.request(ZwRequest(
+    return commandHandler!.request(ZwRequest(
         logger,
         id,
         buildSendDataRequest(id, [
@@ -156,9 +176,9 @@ abstract class Thermostat implements ZwNodeMixin {
         resultKey: ThermostatOperatingStateReport));
   }
 
-  Future<void> setFanMode(int mode, {bool fanOn}) async {
-    int offAndMode = ((fanOn ?? true) ? 0x00 : 0x80) + (mode & 0x0F);
-    await commandHandler.request(ZwRequest(
+  Future<void> setFanMode(int mode, {bool fanOn = true}) async {
+    var offAndMode = (fanOn ? 0x00 : 0x80) + (mode & 0x0F);
+    await commandHandler!.request(ZwRequest(
       logger,
       id,
       buildSendDataRequest(id, [
@@ -168,6 +188,32 @@ abstract class Thermostat implements ZwNodeMixin {
       ]),
     ));
     fanMode = ThermostatFanModeReport._(id, offAndMode);
+  }
+
+  Future<ThermostatSetPointReport> requestSetPoint(int setPointType) {
+    return commandHandler!.request(ZwRequest(
+        logger,
+        id,
+        buildSendDataRequest(id, [
+          COMMAND_CLASS_THERMOSTAT_SETPOINT,
+          THERMOSTAT_SETPOINT_GET,
+          setPointType,
+        ]),
+        processResponse: (data) => updateSetPoint(data),
+        resultKey: ThermostatSetPointReport));
+  }
+
+  ThermostatSetPointReport updateSetPoint(List<int> data) {
+    var setPoint = ThermostatSetPointReport(data);
+    switch (setPoint.setPointType) {
+      case ThermostatSetPointType.heating:
+        heatingSetPoint = setPoint;
+        break;
+      case ThermostatSetPointType.cooling:
+        coolingSetPoint = setPoint;
+        break;
+    }
+    return setPoint;
   }
 }
 
@@ -237,17 +283,22 @@ class ThermostatFanStateReport extends ZwCommandClassReport {
   int get state => data[9] & 0x1F;
 }
 
+/// Thermostat mode constants
+class ThermostatMode {
+  ThermostatMode._();
+  static const off = 0x00;
+  static const heat = 0x01;
+  static const cool = 0x02;
+  static const auto = 0x03;
+  static const auxiliary = 0x04;
+  static const resume = 0x05;
+  static const fan = 0x06;
+}
+
 class ThermostatModeReport extends ZwCommandClassReport {
   ThermostatModeReport(List<int> data) : super(data);
 
-  /// The current thermostat mode, where:
-  /// * 0x00 off
-  /// * 0x01 heat
-  /// * 0x02 cool
-  /// * 0x03 auto
-  /// * 0x04 auxiliary
-  /// * 0x05 resume (on) - command only
-  /// * 0x06 fan
+  /// The current thermostat mode as defined in [ThermostatMode]
   int get mode => data[9] & 0x1F;
 }
 
@@ -255,13 +306,67 @@ class ThermostatModeSupportedReport extends ZwCommandClassReport {
   ThermostatModeSupportedReport(List<int> data) : super(data);
 }
 
+class ThermostatOperatingState {
+  ThermostatOperatingState._();
+  static const idle = 0x00;
+  static const heating = 0x01;
+  static const cooling = 0x02;
+  static const fanOnly = 0x03;
+}
+
 class ThermostatOperatingStateReport extends ZwCommandClassReport {
   ThermostatOperatingStateReport(List<int> data) : super(data);
 
-  /// The current thermostat state, where:
-  /// * 0x00 idle
-  /// * 0x01 heating
-  /// * 0x02 cooling
-  /// * 0x03 fan only
+  /// The current thermostat state as defined in [ThermostatOperatingState]
   int get state => data[9] & 0x0F;
+}
+
+/// Thermostat set point type constants
+class ThermostatSetPointType {
+  ThermostatSetPointType._();
+  static const heating = 0x01;
+  static const cooling = 0x02;
+  static const furnace = 0x07;
+  static const dryAir = 0x08;
+  static const moistAir = 0x09;
+  static const autoChangeover = 0x0A;
+  static const energySaveHeating = 0x0B;
+  static const energySaveCooling = 0x0C;
+  static const awayHeating = 0x0D;
+  static const awayCooling = 0x0E;
+  static const fullPower = 0x0F;
+}
+
+/// Thermostat set point scale constants
+class ThermostatSetPointScale {
+  ThermostatSetPointScale._();
+  static const celsius = 0;
+  static const fahrenheit = 1;
+}
+
+class ThermostatSetPointReport extends ZwCommandClassReport {
+  ThermostatSetPointReport(List<int> data) : super(data);
+
+  /// The current set point types are defined in [ThermostatSetPointType]
+  int get setPointType => data[9] & 0x0F;
+
+  /// The units of measurement as defined in [ThermostatSetPointScale]
+  int get scale => (data[10] >> 3) & 0x03;
+
+  /// [precision] is the # of decimal places in the value
+  int get precision => (data[10] >> 5) & 0x07;
+
+  /// # of bytes in the value = 1, 2, 4
+  int get valueSize => data[10] & 0x07;
+
+  /// The raw temperature in either fahrenheit or celsius depending on [scale]
+  num get value => bytesToNum(data.sublist(11, 11 + valueSize), precision);
+
+  /// The temperature in degrees Celsius
+  num get temperature {
+    var temperature = value;
+    if (scale == ThermostatSetPointScale.fahrenheit)
+      temperature = (temperature - 32) * 5 / 9;
+    return temperature;
+  }
 }

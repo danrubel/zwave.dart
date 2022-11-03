@@ -44,7 +44,7 @@ main() {
     expect(report.valueSize, 4);
     expect(report.value, 0x1318064 / 1000);
     expect(report.deltaTime, 0x278);
-    expect((report.previousValue * 1000).round() / 1000, 0x3318064 / 1000);
+    expect((report.previousValue! * 1000).round() / 1000, 0x3318064 / 1000);
   });
 }
 

@@ -18,16 +18,18 @@ import 'package:zwave/zw_exception.dart';
 /// devices are forwarded to the corresponding [ZwNode].
 /// Messages destine for physical devices are queue and sent sequentially.
 class ZwManager extends MessageDispatcher<void> implements CommandHandler {
+  @override
   final logger = Logger('ZwManager');
+
   final controller = PrimaryController();
-  final ZwDriver driver;
-  final int retryDelayMsForTesting;
+  final ZwDriver? driver;
+  final int? retryDelayMsForTesting;
 
   /// A list of tasks being processed or `null` if processing is complete.
-  List<_Task> _tasks;
+  List<_Task>? _tasks;
 
   ZwManager(this.driver, {this.retryDelayMsForTesting}) {
-    driver.requestHandler = dispatch;
+    driver!.requestHandler = dispatch;
     initHandlers();
     add(controller);
   }
@@ -42,10 +44,11 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   // ===== nodes ==========================================================
 
   /// A list of [ZwNode]s indexed by their node ids
-  final _nodes = <ZwNode>[];
+  final _nodes = <ZwNode?>[];
 
   /// The current [ZwNode]s managed by the receiver
-  Iterable<ZwNode> get nodes => _nodes.where((node) => node != null).toList();
+  Iterable<ZwNode> get nodes =>
+      List<ZwNode>.from(_nodes.where((node) => node != null));
 
   /// Insert a [node] into the list of nodes at the [node]'s id
   void add(ZwNode node) {
@@ -68,7 +71,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   }
 
   /// Return the node with the specified [nodeId] or `null` if none.
-  ZwNode existingNodeWithId(int nodeId) =>
+  ZwNode? existingNodeWithId(int nodeId) =>
       nodeId < _nodes.length ? _nodes[nodeId] : null;
 
   /// Create an [UnknownNode] and add it to the receiver's collection of nodes.
@@ -131,45 +134,47 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
     data[n-1] - transmit options (0x02 low power) <-- is this optional?
     data[n] - checksum
     */
-    if (data.length < 10) {
-      if (data.length < 7) {
-        logger.warning('invalid send data received: $data');
-        return;
-      } else if (data.length == 7) {
-        if (data[5] /* command length */ == 0) {
-          //  0x01, // SOF
-          //  0x05, // length 5 excluding SOF and checksum
-          //  0x00, // request
-          //  0x13, // FUNC_ID_ZW_SEND_DATA
-          //  0x25, // source node 37
-          //  0x00, // command length 0
-          //  0xCC, // checksum
-          logger.fine('ping controller from node # ${data[4]}');
-        } else {
-          logger.warning('invalid send data received: $data');
-        }
-        return;
-      } else {
-        if (data[5] /* command length */ == 0 &&
-            data[6] == COMMAND_CLASS_NO_OPERATION) {
-          //  0x01, // SOF
-          //  0x07, // length 7 excluding SOF and checksum
-          //  0x00, // request
-          //  0x13, // FUNC_ID_ZW_SEND_DATA
-          //  0x25, // source node 37
-          //  0x00, // command length 0
-          //  0x00, // COMMAND_CLASS_NO_OPERATION
-          //  0x04, // transmit options: auto route (may not be included)
-          //  0xCA, // checksum
-          logger.fine('ping controller from node # ${data[4]}');
-        } else {
-          logger.warning('invalid send data received: $data');
-        }
-        return;
-      }
+    if (data.length < 7) {
+      logger.warning('invalid send data received: $data');
+      return;
     }
     var nodeId = data[4];
     var node = existingNodeWithId(nodeId) ?? createUnknownNode(nodeId);
+    if (data.length == 7) {
+      if (data[5] /* command length */ == 0) {
+        //  0x01, // SOF
+        //  0x05, // length 5 excluding SOF and checksum
+        //  0x00, // request
+        //  0x13, // FUNC_ID_ZW_SEND_DATA
+        //  0x25, // source node 37
+        //  0x00, // command length 0
+        //  0xCC, // checksum
+        logger.fine('ping controller from node # ${data[4]}');
+        node.handleNoOp(data);
+        return;
+      }
+      logger.warning('invalid send data received: $data');
+      return;
+    }
+    if (data.length < 10) {
+      if (data[5] /* command length */ == 0 &&
+          data[6] == COMMAND_CLASS_NO_OPERATION) {
+        //  0x01, // SOF
+        //  0x07, // length 7 excluding SOF and checksum
+        //  0x00, // request
+        //  0x13, // FUNC_ID_ZW_SEND_DATA
+        //  0x25, // source node 37
+        //  0x00, // command length 0
+        //  0x00, // COMMAND_CLASS_NO_OPERATION
+        //  0x04, // transmit options: auto route (may not be included)
+        //  0xCA, // checksum
+        logger.fine('ping controller no-op from node # ${data[4]}');
+        node.handleNoOp(data);
+        return;
+      }
+      logger.warning('invalid send data received: $data');
+      return;
+    }
     node.dispatchSendData(data);
   }
 
@@ -215,19 +220,19 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   void _process(_Task task) async {
     if (_tasks != null) {
       // If tasks are already being processed, add the task and return
-      _tasks.add(task);
+      _tasks!.add(task);
       return;
     }
     _tasks = <_Task>[task];
-    while (_tasks.isNotEmpty) {
-      task = _tasks[0];
+    while (_tasks!.isNotEmpty) {
+      task = _tasks![0];
       try {
         await task.run();
       } catch (e, s) {
         logger.warning('task exception', e, s);
         task.handleException(e, s);
       }
-      _tasks.remove(task);
+      _tasks!.remove(task);
     }
     // Discard the empty task list to indicate that processing is complete
     _tasks = null;
@@ -237,7 +242,7 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   final _resultPool = <ZwRequest>[];
 
   /// A timer for triggering removal of timed-out requests in [_resultPool].
-  Timer _resultTimer;
+  Timer? _resultTimer;
 
   /// Add the [request] to the pool of requests awaiting additional data
   /// from the device to complete the request. When the node receives
@@ -254,19 +259,19 @@ class ZwManager extends MessageDispatcher<void> implements CommandHandler {
   void _startResultTimer() {
     _resultTimer?.cancel();
     if (_resultPool.isNotEmpty) {
-      DateTime nextTime = _resultPool.fold<DateTime>(
+      DateTime nextTime = _resultPool.fold<DateTime?>(
         _resultPool.first.resultEndTime,
         (endTime, request) {
-          final otherTime = request.resultEndTime;
-          return endTime.isBefore(otherTime) ? endTime : otherTime;
+          final otherTime = request.resultEndTime!;
+          return endTime!.isBefore(otherTime) ? endTime : otherTime;
         },
-      );
+      )!;
       Duration duration = nextTime.difference(DateTime.now());
 
       _resultTimer = Timer(duration, () {
         final now = DateTime.now();
         _resultPool.removeWhere((request) {
-          if (now.isBefore(request.resultEndTime)) return false;
+          if (now.isBefore(request.resultEndTime!)) return false;
           if (!request.completer.isCompleted) {
             request.completer.completeError(ZwException.resultTimeout);
           } else {
@@ -313,7 +318,7 @@ class _RequestTask extends _Task {
     while (true) {
       try {
         // Send command and wait for ACK indicating command was received
-        await manager.driver.send(requestData,
+        await manager.driver!.send(requestData,
             responseCompleter: responseCompleter,
             responseTimeout: request.responseTimeout);
 
@@ -324,9 +329,8 @@ class _RequestTask extends _Task {
 
         // If the send was canceled, corrupted, or timeout, retry up to 3 times
         if (e.isSendCanceledCorruptedOrTimeout && retryCount < 3) {
-          await Future.delayed(Duration(
-              milliseconds:
-                  manager.retryDelayMsForTesting ?? retryCount * 1000 + 100));
+          var ms = manager.retryDelayMsForTesting ?? retryCount * 1000 + 100;
+          await Future.delayed(Duration(milliseconds: ms));
           ++retryCount;
         } else {
           handleException(e, null);
@@ -344,8 +348,9 @@ class _RequestTask extends _Task {
         request.completer.complete(null);
       }
     } else {
-      if (request.processResponse != null) {
-        request.completer.complete(request.processResponse(data));
+      var responseHandler = request.processResponse;
+      if (responseHandler != null) {
+        request.completer.complete(responseHandler(data));
       } else {
         request.logger.warning('unexpected response: $data');
         request.completer.complete(null);
@@ -354,7 +359,7 @@ class _RequestTask extends _Task {
   }
 
   @override
-  void handleException(exception, StackTrace trace) {
+  void handleExceptionImpl(Object exception, StackTrace? trace) {
     if (!responseCompleter.isCompleted) {
       responseCompleter.completeError(exception, trace);
     } else if (!request.completer.isCompleted) {
@@ -372,7 +377,12 @@ abstract class _Task {
   Future<void> run();
 
   /// Handle an exception that occurred while running the task.
-  void handleException(error, StackTrace trace);
+  void handleException(error, StackTrace? trace) {
+    handleExceptionImpl((error as Object?) ?? 'unknown exception', trace);
+  }
+
+  /// Handle an exception that occurred while running the task.
+  void handleExceptionImpl(Object error, StackTrace? trace);
 }
 
 class _CommandTask extends _Task {
@@ -389,7 +399,7 @@ class _CommandTask extends _Task {
 
     // ignore: unawaited_futures
     responseCompleter.future.then((List<int> response) {
-      command.responseCompleter.complete(response);
+      command.responseCompleter!.complete(response);
       finished.complete();
     }).catchError((exception, StackTrace trace) {
       handleException(exception, trace);
@@ -400,7 +410,7 @@ class _CommandTask extends _Task {
     while (true) {
       try {
         // Send command and wait for ACK indicating command was received
-        await manager.driver.send(command.data,
+        await manager.driver!.send(command.data,
             responseCompleter: responseCompleter,
             responseTimeout: command.responseTimeout);
 
@@ -430,13 +440,13 @@ class _CommandTask extends _Task {
   }
 
   @override
-  void handleException(exception, StackTrace trace) {
+  void handleExceptionImpl(Object exception, StackTrace? trace) {
     if (!sendCompleter.isCompleted) {
       sendCompleter.completeError(exception, trace);
     } else if (!responseCompleter.isCompleted) {
       responseCompleter.completeError(exception, trace);
-    } else if (!command.responseCompleter.isCompleted) {
-      command.responseCompleter.completeError(exception, trace);
+    } else if (!command.responseCompleter!.isCompleted) {
+      command.responseCompleter!.completeError(exception, trace);
     } else {
       manager.logger
           .warning('exception after response processed', exception, trace);

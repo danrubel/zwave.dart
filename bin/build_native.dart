@@ -6,32 +6,27 @@ import 'package:path/path.dart';
 const pkgName = 'zwave';
 const buildScriptVersion = 2;
 
-main(List<String> args) {
+void main(List<String> args) {
   // Locate the Dart SDK
-  File dartVm = File(Platform.executable);
+  var dartVm = File(Platform.resolvedExecutable);
   print('Dart VM... ${dartVm.path}');
-  if (!dartVm.isAbsolute) {
-    dartVm = File.fromUri(Directory.current.uri.resolve(dartVm.path));
-    print('Dart VM... ${dartVm.path}');
-  }
-  abortIf(!dartVm.isAbsolute, 'Failed to find absolute path to Dart VM');
 
   // Locate Dart SDK
   final dartSdk = dartVm.parent.parent;
   print('Dart SDK... ${dartSdk.path}');
 
   // Locate dart_api.h
-  const headerPath = 'include/dart_api.h';
-  final headerFile = File.fromUri(dartSdk.uri.resolve(headerPath));
-  abortIf(!headerFile.existsSync(), 'Failed to find $headerPath');
+  final headerRelUriPath = 'include/dart_api.h';
+  final headerFile = File.fromUri(dartSdk.uri.resolve(headerRelUriPath));
+  abortIf(!headerFile.existsSync(), 'Failed to find $headerRelUriPath');
 
   // Run pub list to determine the location of the zwave package being used
   final pub = File.fromUri(dartSdk.uri.resolve('bin/pub'));
-  String pubOut =
+  var pubOut =
       Process.runSync(pub.path, ['list-package-dirs']).stdout as String;
-  Map<String, dynamic> pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
+  var pubResult = jsonDecode(pubOut) as Map<String, dynamic>;
   assertNoPubListError(pubResult);
-  String dirName = pubResult['packages'][pkgName] as String;
+  var dirName = pubResult['packages'][pkgName] as String;
   final pkgDir = Directory(dirName);
   print('Building library in ${pkgDir.path}');
 
@@ -43,7 +38,7 @@ main(List<String> args) {
 
   // Build the native library
   final nativeDir = Directory(join(pkgDir.path, 'src', 'native'));
-  final buildScriptFile = File(join(nativeDir.path, 'build_lib'));
+  final buildScriptFile = File(join(nativeDir.path, 'build_native'));
   assertRunningOnRaspberryPi();
   final buildResult = Process.runSync(
       buildScriptFile.path, [buildScriptVersion.toString(), dartSdk.path]);
@@ -55,8 +50,8 @@ main(List<String> args) {
 /// Parse the given content and return the version string
 String parseVersion(String pubspec) {
   var key = 'version:';
-  int start = pubspec.indexOf(key) + key.length;
-  int end = pubspec.indexOf('\n', start);
+  var start = pubspec.indexOf(key) + key.length;
+  var end = pubspec.indexOf('\n', start);
   return pubspec.substring(start, end).trim();
 }
 
@@ -72,8 +67,7 @@ void abortIf(bool condition, String message) {
 void assertNoPubListError(Map<String, dynamic> pubResult) {
   var error = pubResult['error'];
   if (error == null) {
-    Map<String, dynamic> packages =
-        pubResult['packages'] as Map<String, dynamic>;
+    var packages = pubResult['packages'] as Map<String, dynamic>?;
     if (packages != null) {
       var pkg = packages[pkgName];
       if (pkg != null) {
@@ -92,9 +86,18 @@ void assertNoPubListError(Map<String, dynamic> pubResult) {
 }
 
 /// Assert that this script is executing on the Raspberry Pi.
-assertRunningOnRaspberryPi() {
-  if (!Directory('/home/pi').existsSync()) {
+void assertRunningOnRaspberryPi() {
+  // Check for Windows 11 running on RPi
+  if (Platform.isWindows) {
+    // TODO detect typical install on RPi
+    print('Running Windows... hopefully on the Raspberry Pi...');
+    return;
+  }
+  if (Platform.isMacOS || Platform.isIOS) {
     print('Not running on Raspberry Pi... skipping build');
     throw 'Aborting build';
   }
+  // Check for typical Raspbian install
+  if (Directory('/home/pi').existsSync()) return;
+  print('Typical setup not found... hopefully running on the Raspberry Pi...');
 }

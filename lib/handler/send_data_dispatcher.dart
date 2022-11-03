@@ -18,7 +18,7 @@ abstract class SendDataDispatcher<T> {
 
   Logger get logger;
 
-  T dispatchSendData(List<int> data) {
+  T? dispatchSendData(List<int> data) {
     switch (data[6]) {
       case COMMAND_CLASS_NO_OPERATION:
         return handleNoOp(data);
@@ -27,12 +27,12 @@ abstract class SendDataDispatcher<T> {
     }
   }
 
-  T handleNoOp(List<int> data) {
-    logger.finer('ping controller');
+  T? handleNoOp(List<int> data) {
+    logger.fine('ping controller');
     return null;
   }
 
-  T handleUnknownSendDataId(int cmdId, List<int> data) {
+  T? handleUnknownSendDataId(int cmdId, List<int> data) {
     final nodeId = data[4];
     logger.warning('Unhandled send data id: $nodeId $cmdId $data');
     return null;

@@ -18,7 +18,7 @@ This package provides
 ## Requirements
 
 * A Z-Wave Controller such as the
-  [Aeon Labs Aeotec Z-Wave Z-Stick, Gen5 (ZW090)](http://aeotec.com/z-wave-usb-stick).
+  [Aeon Labs Aeotec Z-Wave Z-Stick, Gen5 (ZW090)](https://aeotec.com/z-wave-usb-stick).
 
 ## Setup
 
@@ -34,7 +34,7 @@ your Z-Wave controller with your Z-Wave devices
 3) From your application directory (the application that references
 the zwave package) run the following command to build the native library
 ```
-    pub global run zwave:build_lib
+    pub global run zwave:build_native
 ```
 
 4) Finally, run the included [command line application](bin/check_port.dart) to ensure that this package
@@ -47,8 +47,8 @@ is installed correctly and can communicate with your devices using your Z-Wave C
 makes the Dart scripts in the zwave/bin directory runnable
 from the command line.
 [pub global run](https://www.dartlang.org/tools/pub/cmd/pub-global.html#running-a-script)
-zwave:build_lib runs the [zwave/bin/build_lib.dart](bin/build_lib.dart)
-program which in turn calls the [build_lib](lib/src/native/build_lib) script
+zwave:build_native runs the [zwave/bin/build_native.dart](bin/build_native.dart)
+program which in turn calls the [build_native](lib/src/native/build_native) script
 to compile the native libozw_ext.so library for the zwave package.
 
 ## Example

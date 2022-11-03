@@ -3,7 +3,7 @@ import 'package:zwave/report/basic_report.dart';
 import 'package:zwave/report/sensor_binary_report.dart';
 
 abstract class BinarySensor implements ZwNodeMixin {
-  bool state;
+  bool? state;
 
   // TODO add BinarySensor tests
 

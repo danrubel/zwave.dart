@@ -10,15 +10,15 @@ class ZwRequest<T> extends ZwMessage {
   final Logger logger;
   final int nodeId;
   final List<int> data;
-  final T Function(List<int> data) processResponse;
+  final T Function(List<int> data)? processResponse;
   final Duration responseTimeout;
-  final Object resultKey;
+  final Object? resultKey;
   final Duration resultTimeout;
   final completer = Completer<T>();
 
   /// Used by [ZwManager] to cache the time at which the manager
   /// should stop waiting for a result/response from the device.
-  DateTime resultEndTime;
+  DateTime? resultEndTime;
 
   /// Construct a request to be sent to a device.
   ///
@@ -61,27 +61,22 @@ void appendCrc(List<int> data) {
   data.add(crc);
 }
 
-Iterable<int> buildAsciiChars(String text) {
-  int length = text.length;
-  final result = List<int>(length);
-  for (int index = 0; index < length; ++index) {
-    int codeUnit = text.codeUnitAt(index);
-    if (codeUnit > 0x7F) codeUnit = '_'.codeUnitAt(0);
-    result[index] = codeUnit;
-  }
-  return result;
-}
+Iterable<int> buildAsciiChars(String text) =>
+    List.generate(text.length, (index) {
+      var codeUnit = text.codeUnitAt(index);
+      return codeUnit > 0x7F ? '_'.codeUnitAt(0) : codeUnit;
+    });
 
 /// Return message data for a zwave function request
-List<int> buildFunctRequest(int functId, [List<int> functParam]) =>
+List<int> buildFunctRequest(int functId, [List<int>? functParam]) =>
     buildFunctMessage(REQ_TYPE, functId, functParam);
 
 /// Return message data for a zwave function response
-List<int> buildFunctResponse(int functId, [List<int> functParam]) =>
+List<int> buildFunctResponse(int functId, [List<int>? functParam]) =>
     buildFunctMessage(RES_TYPE, functId, functParam);
 
 /// Return data for a zwave function message
-List<int> buildFunctMessage(int frameType, int functId, List<int> functParam) {
+List<int> buildFunctMessage(int frameType, int functId, List<int>? functParam) {
   var data = <int>[
     SOF, // start of frame
     3, // length
@@ -100,34 +95,30 @@ List<int> buildFunctMessage(int frameType, int functId, List<int> functParam) {
   return data;
 }
 
-/// Return message data for a zwave send data command request
+/// Return message data for a zwave send data command request where
+/// [nodeID] the destination node or 0xFF for broadcast.
 List<int> buildSendDataRequest(int nodeId, List<int> cmdData,
-    {int transmitOptions}) =>
+        {TransmitOptions transmitOptions = TransmitOptions.normal}) =>
     buildSendDataMessage(REQ_TYPE, nodeId, cmdData,
         transmitOptions: transmitOptions);
 
-/// Return message data for a zwave send data command response
+/// Return message data for a zwave send data command response where
+/// [nodeID] the destination node or 0xFF for broadcast.
 List<int> buildSendDataResponse(int nodeId, List<int> cmdData,
-    {int transmitOptions}) =>
+        {TransmitOptions transmitOptions = TransmitOptions.normal}) =>
     buildSendDataMessage(RES_TYPE, nodeId, cmdData,
         transmitOptions: transmitOptions);
 
-/// Return data for a zwave send data command message
+/// Return message data for a zwave send data command message where
+/// [nodeID] the destination node or 0xFF for broadcast.
 List<int> buildSendDataMessage(int frameType, int nodeId, List<int> cmdData,
-    {int transmitOptions}) {
+    {TransmitOptions transmitOptions = TransmitOptions.normal}) {
   final functParam = <int>[
     nodeId,
     cmdData.length,
   ];
   functParam.addAll(cmdData);
-
-  // transmit options
-  //  #define TRANSMIT_OPTION_ACK		 		 0x01
-  //  #define TRANSMIT_OPTION_LOW_POWER	 0x02
-  //  #define TRANSMIT_OPTION_AUTO_ROUTE 0x04
-  //  #define TRANSMIT_OPTION_NO_ROUTE 	 0x10
-  //  #define TRANSMIT_OPTION_EXPLORE		 0x20
-  functParam.add(transmitOptions ?? 0x25);
+  functParam.add((transmitOptions).flags);
 
   return buildFunctMessage(frameType, FUNC_ID_ZW_SEND_DATA, functParam);
 }
@@ -141,3 +132,32 @@ int get nextSequenceNumber {
 
 int get nextTestSequenceNumber => _sequenceNumber;
 int _sequenceNumber = Random().nextInt(0x100);
+
+class TransmitOptions {
+  final int flags;
+
+  /// Z-Wave packet transmission options:
+  /// [ack] - Request acknowledgment from destination node. Allow routing.
+  /// [noRoute] - Send only in direct range. Explicitly disallow all routing.
+  /// [lowPower] - Transmit at low output power level (1/3 of normal RF range)
+  /// [autoRoute] - If last working route fails or does not exist, then routes from the routing table will be used.
+  /// [explore] - If existing routes fail, then resolve new routes via explorer discovery.
+  const TransmitOptions({
+    bool ack: false,
+    bool lowPower: false,
+    bool autoRoute: false,
+    bool noRoute: false,
+    bool explore: false,
+  }) : this.raw((ack ? 0x01 : 0x00) |
+            (lowPower ? 0x02 : 0x00) |
+            (autoRoute ? 0x04 : 0x00) |
+            (noRoute ? 0x10 : 0x00) |
+            (explore ? 0x20 : 0x00));
+
+  const TransmitOptions.raw(this.flags);
+
+  /// Default/normal transmission options. Should not be set to `null`.
+  static const normal =
+      // TODO consider TransmitOptions ack: true only
+      TransmitOptions(ack: true, autoRoute: true, explore: true);
+}
