@@ -1,5 +1,7 @@
 # zwave.dart
 
+[![pub package](https://img.shields.io/pub/v/zwave.svg)](https://pub.dartlang.org/packages/zwave)
+
 zwave is a Dart package for interacting with Z-Wave devices.
 
 ## Overview
