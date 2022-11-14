@@ -1,11 +1,5 @@
 #!/bin/sh
 #
-# Build the zwave native libraries on the Raspberry Pi.
-# The generated native library file is referenced via
-# import 'dart-ext:zwave_ext'
-#
-# Arguments: <buildScriptVersion> <DartSdkPath>
-#
 # Typically, this script is run by calling
 #
 #    pub global run zwave:build_native
@@ -15,20 +9,17 @@
 # exit on error
 set -e
 
-#DARTVM=$(readlink `which dart`)
-#DARTBIN=$(dirname $DARTVM)
-#DARTSDK=$(dirname $DARTBIN)
-DARTSDK=$2
-
 cd $(dirname $0)
 echo building zwave in `pwd`
 
 ####################################################################
 # Build rpi_zw_port native library
 
-g++ -fPIC -I$DARTSDK/ -c rpi_zw_port_ext.cc
+g++ -fPIC -c zwave_ext.cc
 # use --no-undefined to check for missing libraries
-gcc -shared -lpthread -Wl,-soname,librpi_zw_port_ext.so -o librpi_zw_port_ext.so rpi_zw_port_ext.o
+gcc -shared -lpthread -Wl,-soname,libzwave_ext.so -o libzwave_ext.so zwave_ext.o
 
-# Copy the library into the /lib/src directory
-cp librpi_zw_port_ext.so ../../port/librpi_zw_port_ext.so
+# echo "exported symbols"
+# nm -g libzwave_ext.so | grep ' T '
+
+echo "gcc build complete"

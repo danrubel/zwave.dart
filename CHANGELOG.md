@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0
+* convert code to use dart:ffi
+* extract and generate native library API
+* add `platforms` to pubspec indicating only Linux is supported
+
 ## 0.11.0
 * migrate to null safety
 * rename `build_lib` to `build_native`

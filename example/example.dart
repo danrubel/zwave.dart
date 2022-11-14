@@ -8,6 +8,14 @@ import 'package:zwave/port/zw_port.dart';
 import 'wall_switch.dart';
 
 Future<void> main() async {
+  print('starting example');
+  Logger.root.level = Level.FINEST;
+  Logger.root.onRecord.listen((LogRecord rec) {
+    print('${rec.level.name}: ${rec.time}: ${rec.message}');
+    if (rec.error != null) print(rec.error);
+    if (rec.stackTrace != null) print(rec.stackTrace);
+  });
+
   final example = Example(RpiZwPort());
   await example.start();
   await example.turnLampOn();

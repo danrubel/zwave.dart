@@ -1,12 +1,17 @@
 name: zwave
-version: 0.11.0
+version: 0.12.0
 author: Dan Rubel <danrubel@google.com>
 description: >
   A Dart Library for interacting with Z-Wave devices on Linux.
 homepage: https://github.com/danrubel/zwave.dart
+
+# This package only works with Linux running on Raspberry Pi
+platforms:
+  linux:
 environment:
   sdk: '>=2.12.0 <3.0.0'
 dependencies:
+  ffi: ^1.2.1
   logging: ^1.0.1
   path: ^1.8.0
 dev_dependencies:

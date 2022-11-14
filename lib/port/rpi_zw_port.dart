@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:ffi' as ffi;
 import 'dart:isolate';
+import 'dart:typed_data';
 
+import 'package:ffi/ffi.dart' as ffi;
 import 'package:logging/logging.dart';
 import 'package:zwave/port/zw_port.dart';
-
-import 'dart-ext:rpi_zw_port_ext';
+import 'package:zwave/src/native/zwave_ext.dart';
 
 /// [RpiZwPort] is a concrete subclass of [ZwPort] for interacting
 /// with a Z-Wave controller connected to a Raspberry Pi
@@ -79,6 +81,7 @@ class RpiZwPort extends ZwPort {
 final Logger _logger = Logger('RpiZwPort');
 
 void startIsolate(List info) {
+  _log('isolate starting');
   final portPath = info[0] as String;
   final setupSendPort = info[1] as SendPort;
   final notificationSendPort = info[2] as SendPort;
@@ -90,77 +93,95 @@ class RpiZwIsolate {
   final String portPath;
   final ReceivePort cmdPort = ReceivePort();
   final SendPort notificationSendPort;
+  final dylib = NativePgkLib(findDynamicLibrary());
+  final buf255 = ffi.malloc.allocate<ffi.Uint8>(255);
   int? ttyFd;
 
   RpiZwIsolate(this.portPath, this.notificationSendPort);
 
   void start(SendPort setupSendPort) async {
-    log('starting');
-    ttyFd = _openPort(portPath);
+    _log('opening port');
+    copyStringToBuf(portPath);
+    ttyFd = dylib.openPortMth(buf255);
     if (ttyFd! <= 0)
-      throw 'open port failed: $ttyFd, ${_lastError()}, $portPath';
+      throw 'open port failed: $ttyFd, ${dylib.lastErrorMth()}, $portPath';
 
     cmdPort.listen(processCmds);
     setupSendPort.send(cmdPort.sendPort);
 
     // Read and forward any messages from the port
     while (ttyFd != null) {
-      log('reading...');
-      var data = _read(ttyFd!);
-      log('read ${data.runtimeType} : $data');
-      if (data is int) {
-        log('one byte read');
-        notificationSendPort.send(data);
-        if (data < 0) {
-          notificationSendPort.send(_lastError());
-        }
-      } else if (data != null) {
-        log('multiple bytes read');
-        notificationSendPort.send(data);
-      } else {
-        log('sleep before trying to read again');
+      _log('reading...');
+      var count = dylib.readBytesMth(ttyFd!, 255, buf255);
+      if (count > 1) {
+        var rxData = Uint8List(count);
+        for (var index = 0; index < count; index++) //
+          rxData[index] = buf255.elementAt(index).value;
+        _log('  read: $rxData');
+        notificationSendPort.send(rxData);
+      } else if (count == 1) {
+        var byteValue = buf255.elementAt(0).value;
+        _log('  read: $byteValue');
+        notificationSendPort.send(byteValue);
+      } else if (count == 0) {
+        _log('  sleep before trying to read again');
         await Future.delayed(const Duration(milliseconds: 100));
+      } else {
+        var byteValue = buf255.elementAt(0).value;
+        var lastError = dylib.lastErrorMth();
+        _log('  read error: $byteValue, $lastError');
+        notificationSendPort.send(byteValue);
+        notificationSendPort.send(lastError);
       }
     }
-    log('exit read loop');
+    _log('exit read loop');
   }
 
   void processCmds(message) {
     if (ttyFd == null) {
-      log('command ignored - port closed');
+      _log('command ignored - port closed: $message');
       return;
     }
-    log('command received');
+    _log('command received: $message');
 
     int? writeResult;
     if (message != null) {
-      log('writing ${message.runtimeType} : $message');
-      writeResult = _write(ttyFd!, message as List<int>);
+      _log('writing ${message.runtimeType} : $message');
+      var txData = message as List<int>;
+      var count = txData.length;
+      for (var index = 0; index < count; index++) //
+        buf255.elementAt(index).value = txData[index];
+      writeResult = dylib.writeBytesMth(ttyFd!, count, buf255);
       if (writeResult >= 0) {
-        log('bytes written');
+        _log('  $writeResult bytes written');
         return;
       }
+      _log('  write failed: $writeResult, ${dylib.lastErrorMth()}');
     }
-    log('write failed');
 
-    var closeResult = _closePort(ttyFd!);
+    _log('closing port');
+    var closeResult = dylib.closePortMth(ttyFd!);
     cmdPort.close();
     ttyFd = null;
+    if (closeResult >= 0)
+      _log('  closed');
+    else
+      _log('  close failed: $closeResult, ${dylib.lastErrorMth()}');
+  }
 
-    if (writeResult != null && writeResult < 0) {
-      throw 'write failed: $writeResult, ${_lastError()}, $message';
-    } else if (closeResult < 0) {
-      throw 'close failed: $closeResult, ${_lastError()}';
+  /// Copy the characters from [str] into [buf255].
+  void copyStringToBuf(String str) {
+    if (str.length > 254) throw 'String too long: $str';
+    var index = 0;
+    for (var value in str.codeUnits) {
+      buf255.elementAt(index).value = value;
+      ++index;
     }
+    // null terminated C string
+    buf255.elementAt(index).value = 0;
   }
+}
 
-  void log(String message) {
-    // print('isolate: $message');
-  }
-
-  int _closePort(int ttyFd) native 'closePort';
-  int _lastError() native 'lastError';
-  int _openPort(String portPath) native 'openPort';
-  dynamic _read(int ttyFd) native 'read';
-  int _write(int ttyFd, List<int> bytes) native 'write';
+void _log(String message) {
+  // print('isolate: $message');
 }
